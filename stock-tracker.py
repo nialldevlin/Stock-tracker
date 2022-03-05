@@ -90,6 +90,7 @@ for stock in stock_list:
 			else:
 				print(f"{stock} falling")
 				stock_status[stock] = f"{stock} falling"
+			
 		else:
 			b_or_s = ""
 			if (old_trend == 0 and new_trend == 1):
@@ -98,6 +99,7 @@ for stock in stock_list:
 					b_or_s = "Bought"
 				else:
 					b_or_s = "Buy"
+
 			elif(old_trend == 1 and new_trend == 0):
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (1, 2):
 					r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
