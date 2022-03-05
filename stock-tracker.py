@@ -1,3 +1,5 @@
+#!/home/pi/Documents/Stock-tracker/stocktracker/bin/python3
+
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,12 +10,18 @@ import os
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
+from email import encoders
+import telegram_send as ts
+import logging
+
+# Logging
+logging.basicConfig(filename='stocktracker.log', encoding='utf-8', level=logging.INFO)
 
 # Email
-gmail_user = 'stocknomitron@gmail.com'
-gmail_password = 'Stock$$69420'
+gmail_user = 'stocknomitron@gmail.com' #os.environ['GMAIL_USER']
+gmail_password = 'Stock$$69420' #os.environ['GMAIL_PASSWORD']
 
-to_list = {'niallcdevlin@gmail.com':['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']}
+to_list = ['niallcdevlin@gmail.com'] #[os.environ['TO_LIST']]
 
 stock_list = ['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']
 tickers = []
@@ -89,30 +97,19 @@ for stock in stock_list:
 sent_from = gmail_user
 subject = 'Stock Status Update'
 body = ""
-body += "Important Updates (Buy/Sell)\n\n"
-for stock in important_updates:
-	body += important_updates[stock]
-	body += "\n"
+if important_updates:
+    messages = []
+    body += "Important Updates (Buy/Sell)\n\n"
+    for stock in important_updates:
+        messages.append(important_updates[stock])
+        body += important_updates[stock]
+        body += "\n"
+    ts.send(messages=messages)
 
 body += "\n\nOther Stocks (Rising/Falling) Skip to the end for charts (see attachments)\n\n"
 for stock in stock_status:
 	body += stock_status[stock]
 	body += "\n"
-
-for stock in stock_list:
-    # set attachment mime and file name, the image type is png
-    with open(f"{stock}.png", 'rb') as f:
-	    mime = MIMEImage('image', 'png', filename=f"{stock}.png")
-	    # add required header data:
-	    mime.add_header('Content-Disposition', 'attachment', filename=f"{stock}.png")
-	    mime.add_header('X-Attachment-Id', '0')
-	    mime.add_header('Content-ID', '<0>')
-	    # read attachment file content into the MIMEBase object
-	    mime.set_payload(f.read())
-	    # encode with base64
-	    encoders.encode_base64(mime)
-	    # add MIMEBase object to MIMEMultipart object
-	    msg.attach(mime)
 
 for to in to_list:
     msg = MIMEMultipart()
@@ -120,11 +117,28 @@ for to in to_list:
     msg['From'] = sent_from
     msg['To'] = to
 
+    txt = MIMEText(body)
+    msg.attach(txt);
+
+    for stock in stock_list:
+        # set attachment mime and file name, the image type is png
+        stock_img_file = f"{stock}.png"
+        with open(stock_img_file, 'rb') as f:
+            mime = MIMEImage(f.read(), name=os.path.basename(stock_img_file))
+            # add required header data:
+            mime.add_header('Content-Disposition', 'attachment', filename=stock_img_file)
+            mime.add_header('X-Attachment-Id', '0')
+            mime.add_header('Content-ID', '<0>')
+            # encode with base64
+            encoders.encode_base64(mime)
+            # add MIMEBase object to MIMEMultipart object
+            msg.attach(mime)
     s = smtplib.SMTP('smtp.gmail.com', 587)
     s.ehlo()
     s.starttls()
     s.ehlo()
-    s.login(UserName, UserPassword)
-    s.sendmail(From, To, msg.as_string())
+    s.login(gmail_user, gmail_password)
+    s.sendmail(gmail_user, to, msg.as_string())
     s.quit()
-    print("Email sent to", to)	
+    print("Email sent to", to)
+    logging.info(f"Email sent to {to}")
