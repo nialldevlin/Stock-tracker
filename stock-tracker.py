@@ -96,14 +96,14 @@ for stock in stock_list:
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
 					r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
 					b_or_s = "Bought"
-                 else:
-                 	b_or_s = "Buy"
+				else:
+					b_or_s = "Buy"
 			elif(old_trend == 1 and new_trend == 0):
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (1, 2):
-                    r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
-                    b_or_s = "Sold"
-                 else:
-                 	b_or_s = "Sell"
+					r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
+					b_or_s = "Sold"
+				else:
+					b_or_s = "Sell"
 			msg = "{} {} at {:.2f}".format(b_or_s, stock, current_ticker.info['currentPrice'])
 			important_updates[stock] = msg
 			print(msg)
