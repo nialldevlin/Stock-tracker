@@ -82,6 +82,7 @@ for stock in stock_list:
 			old_trend = 1
 		if(stats['{}_diff'.format(stock)] > 0):
 			new_trend = 1
+
 		if (old_trend == new_trend):
 			if (new_trend == 1):
 				print(f"{stock} rising")
@@ -90,19 +91,47 @@ for stock in stock_list:
 				print(f"{stock} falling")
 				stock_status[stock] = f"{stock} falling"
 		else:
+			b_or_s = ""
 			if (old_trend == 0 and new_trend == 1):
+				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
+                    r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
+                    b_or_s = "Bought"
+                 else:
+                 	b_or_s = "Buy"
+			elif(old_trend == 1 and new_trend == 0):
+				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (1, 2):
+                    r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
+                    b_or_s = "Sold"
+                 else:
+                 	b_or_s = "Sell"
+			msg = "{} {} at {:.2f}".format(b_or_s, stock, current_ticker.info['currentPrice'])
+			important_updates[stock] = msg
+			print(msg)
+
+	if (old_stats):
+		if(old_stats['{}_diff'.format(stock)] > 0):
+			old_trend = 1
+		if(stats['{}_diff'.format(stock)] > 0):
+			new_trend = 1
+		if (old_trend == new_trend):
+			if (new_trend == 1):
+				print(f"{stock} rising")
+				stock_status[stock] = f"{stock} rising"
+			else:
+				print(f"{stock} falling")
+				stock_status[stock] = f"{stock} falling"
+		else:
+			if old_trend == 0 and new_trend == 1:
                 print("Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
                 # Email
-                if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
-                    r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
+                
                     important_updates[stock] = "Bought {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
                 else:
                     important_updates[stock] = "Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
-			elif(old_trend == 1 and new_trend == 0):
+			elif old_trend == 1 and new_trend == 0:
 				print("Sell {} at {:.2f}".format(stock, current_ticker.info['currentPrice']))
 				# Email
-                if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
-                    r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
+                
 				    important_updates[stock] = "Sold {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
                 else:
                     important_updates[stock] = "Sell {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
