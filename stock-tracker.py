@@ -4,58 +4,127 @@ import matplotlib.pyplot as plt
 from email.message import EmailMessage
 import smtplib
 import pickle
+import os
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
 
 # Email
-strFrom = 'niallcdevlin@gmail.com'
-strTo = 'niallcdevlin@gmail.com'
+gmail_user = 'stocknomitron@gmail.com'
+gmail_password = 'Stock$$69420'
+
+to_list = {'niallcdevlin@gmail.com':['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']}
+
+stock_list = ['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']
+tickers = []
+stock_status = {}
+important_updates = {}
 
 # Create stock tickers, get history, calculate stats
-msft = yf.Ticker("MSFT")
-msft_hist = msft.history(period='1y', interval='1h')
-msft_hist_close = msft_hist['Close']
-msft_20_avg = msft_hist_close.tail(n=20).mean()
-msft_50_avg = msft_hist_close.tail(n=50).mean()
-msft_last_50 = msft_hist_close.tail(n=50)
-msft_last_50.plot(label="msft last 50 day data")
+for stock in stock_list:
+	current_ticker = yf.Ticker(stock)
+	tickers.append(current_ticker)
+	hist = current_ticker.history(period='1y', interval='1h')
+	hist_close = hist['Close']
+	avg_20 = hist_close.tail(n=20).mean()
+	avg_50 = hist_close.tail(n=50).mean()
+	last_50 = hist_close.tail(n=50)
+	last_50.plot(label="{} last 50 day data".format(stock))
 
-# Compare stats
-if msft_20_avg > msft_50_avg:
-	color = 'g'
-else:
-	color = 'r'
-
-# Get old stats
-with open('stats.pkl', 'rb') as f:
-	old_stats = pickle.load(f)
-	f.close()
-# Dump new ones
-stats = {'msft_20_avg':msft_20_avg, 'msft_50_avg':msft_50_avg, 'msft_diff':msft_20_avg - msft_50_avg}
-with open('stats.pkl', 'wb') as f:
-	pickle.dump(stats, f)
-	f.close()
-
-plt.axhline(y=msft_20_avg, color=color, linestyle='-', label='msft 20 day average')
-plt.axhline(y=msft_50_avg, color=color, linestyle='-', label='msft 50 day average')
-plt.savefig('msft.png')
-
-# 0 down 1 up
-old_trend = 0
-new_trend = 0
-
-if (old_stats):
-	if(old_stats['msft_diff'] > 0):
-		old_trend = 1
-	if(stats['msft_diff'] > 0):
-		new_trend = 1
-	if (old_trend == new_trend):
-		if (new_trend == 1):
-			print("MSFT rising")
-		else:
-			print("MSFT falling")
+	# Compare stats
+	if avg_20 > avg_50:
+		color = 'g'
 	else:
-		if (old_trend == 0 and new_trend == 1):
-			print("Buy MSFT at {:.2f}".format(msft.info['currentPrice']))
-			# Email
-		elif(old_trend == 1 and new_trend == 0):
-			print("Sell MSFT at {:.2f}".format(msft.info['currentPrice']))
-			# Email
+		color = 'r'
+
+	# Get old stats
+	try:
+		with open('{}.pkl'.format(stock), 'rb') as f:
+			old_stats = pickle.load(f)
+			f.close()
+	except:
+		old_stats = ""
+	# Dump new ones
+	stats = {'avg_20':avg_20, 'avg':avg_50, '{}_diff'.format(stock):avg_20 - avg_50}
+	with open('{}.pkl'.format(stock), 'wb') as f:
+		pickle.dump(stats, f)
+		f.close()
+
+	plt.axhline(y=avg_20, color=color, linestyle='-', label='20 day average')
+	plt.axhline(y=avg_50, color='b', linestyle='-', label='50 day average')
+	plt.xlabel("Date")
+	plt.ylabel("Price")
+	plt.title("{} Stock Data".format(stock))
+	plt.legend(loc='upper left')
+	plt.savefig('{}.png'.format(stock))
+	plt.clf()
+
+	# 0 down 1 up
+	old_trend = 0
+	new_trend = 0
+	email_msg = "Heres some text so we dont look like scammers"
+
+	if (old_stats):
+		if(old_stats['{}_diff'.format(stock)] > 0):
+			old_trend = 1
+		if(stats['{}_diff'.format(stock)] > 0):
+			new_trend = 1
+		if (old_trend == new_trend):
+			if (new_trend == 1):
+				print(f"{stock} rising")
+				stock_status[stock] = f"{stock} rising"
+			else:
+				print(f"{stock} falling")
+				stock_status[stock] = f"{stock} falling"
+		else:
+			if (old_trend == 0 and new_trend == 1):
+				print("Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice']))
+				# Email
+				important_updates[stock] = "Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
+			elif(old_trend == 1 and new_trend == 0):
+				print("Sell {} at {:.2f}".format(stock, current_ticker.info['currentPrice']))
+				# Email
+				important_updates[stock] = "Sell {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
+
+sent_from = gmail_user
+subject = 'Stock Status Update'
+body = ""
+body += "Important Updates (Buy/Sell)\n\n"
+for stock in important_updates:
+	body += important_updates[stock]
+	body += "\n"
+
+body += "\n\nOther Stocks (Rising/Falling) Skip to the end for charts (see attachments)\n\n"
+for stock in stock_status:
+	body += stock_status[stock]
+	body += "\n"
+
+for stock in stock_list:
+    # set attachment mime and file name, the image type is png
+    with open(f"{stock}.png", 'rb') as f:
+	    mime = MIMEImage('image', 'png', filename=f"{stock}.png")
+	    # add required header data:
+	    mime.add_header('Content-Disposition', 'attachment', filename=f"{stock}.png")
+	    mime.add_header('X-Attachment-Id', '0')
+	    mime.add_header('Content-ID', '<0>')
+	    # read attachment file content into the MIMEBase object
+	    mime.set_payload(f.read())
+	    # encode with base64
+	    encoders.encode_base64(mime)
+	    # add MIMEBase object to MIMEMultipart object
+	    msg.attach(mime)
+
+for to in to_list:
+    msg = MIMEMultipart()
+    msg['Subject'] = subject
+    msg['From'] = sent_from
+    msg['To'] = to
+
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.ehlo()
+    s.starttls()
+    s.ehlo()
+    s.login(UserName, UserPassword)
+    s.sendmail(From, To, msg.as_string())
+    s.quit()
+    print("Email sent to", to)	
