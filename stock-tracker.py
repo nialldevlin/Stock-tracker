@@ -13,6 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from email import encoders
 import telegram_send as ts
 import logging
+import robin_stocks as r
 
 # Logging
 logging.basicConfig(filename='stocktracker.log', encoding='utf-8', level=logging.INFO)
@@ -23,7 +24,11 @@ gmail_password = 'Stock$$69420' #os.environ['GMAIL_PASSWORD']
 
 to_list = ['niallcdevlin@gmail.com'] #[os.environ['TO_LIST']]
 
+# Stock lists
 stock_list = ['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']
+# 0 - Buy, 1 - Sell, 2 - Both
+autotrade_stocks = {'MSFT':{'trade_type':2, 'trade_amount':1},
+                    'VOO':{'trade_type':1, 'trade_amount':1}}
 tickers = []
 stock_status = {}
 important_updates = {}
@@ -86,14 +91,23 @@ for stock in stock_list:
 				stock_status[stock] = f"{stock} falling"
 		else:
 			if (old_trend == 0 and new_trend == 1):
-				print("Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice']))
-				# Email
-				important_updates[stock] = "Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
+                print("Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
+                # Email
+                if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
+                    r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
+                    important_updates[stock] = "Bought {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
+                else:
+                    important_updates[stock] = "Buy {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
 			elif(old_trend == 1 and new_trend == 0):
 				print("Sell {} at {:.2f}".format(stock, current_ticker.info['currentPrice']))
 				# Email
-				important_updates[stock] = "Sell {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
+                if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
+                    r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
+				    important_updates[stock] = "Sold {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
+                else:
+                    important_updates[stock] = "Sell {} at {:.2f}".format(stock, current_ticker.info['currentPrice'])
 
+r.export_completed_stock_orders(".")
 sent_from = gmail_user
 subject = 'Stock Status Update'
 body = ""
