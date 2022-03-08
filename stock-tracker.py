@@ -27,8 +27,8 @@ to_list = ['niallcdevlin@gmail.com'] #[os.environ['TO_LIST']]
 # Stock lists
 stock_list = ['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']
 # 0 - Buy, 1 - Sell, 2 - Both
-autotrade_stocks = {'MSFT':{'trade_type':2, 'trade_amount':1},
-                    'VOO':{'trade_type':1, 'trade_amount':1}}
+autotrade_stocks = {}#{'MSFT':{'trade_type':2, 'trade_amount':1},
+                    #'VOO':{'trade_type':1, 'trade_amount':1}}
 tickers = []
 stock_status = {}
 important_updates = {}
