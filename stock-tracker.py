@@ -110,7 +110,6 @@ for stock in stock_list:
 			important_updates[stock] = msg
 			print(msg)
 
-r.export_completed_stock_orders(".")
 sent_from = gmail_user
 subject = 'Stock Status Update'
 body = ""
