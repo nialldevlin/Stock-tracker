@@ -70,11 +70,9 @@ for stock in stock_list:
 
 	if autotrade:
 		holdings = r.build_holdings()
-		for key,value in holdings.items():
-			print(key, value)
 		if analysis == 'Buy':
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
-					if holdings[stock]['quantity'] < 1:
+					if float(holdings[stock]['quantity']) < 1:
 						r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
 						robin_actions[stock] = "Bought"
 						logging.info("Bought {}".format(stock))
@@ -82,7 +80,7 @@ for stock in stock_list:
 							print("Bought {}".format(stock))
 		elif analysis == 'Sell':
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (1, 2):
-					if holdings[stock]['quantity'] > 0:
+					if float(holdings[stock]['quantity']) > 0:
 						r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
 						robin_actions[stock] = "Sold"
 						logging.info("Sold {}".format(stock))
