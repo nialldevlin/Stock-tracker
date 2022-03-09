@@ -45,10 +45,8 @@ login = r.login(r_user,r_pass)
 # Stock lists
 stock_list = np.array(['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC'])
 # 0 - Buy, 1 - Sell, 2 - Both
-autotrade_stocks = {'MSFT':{'trade_type':2, 'trade_amount':1},
-                    'VOO':{'trade_type':2, 'trade_amount':1},
-                    'VTI':{'trade_type':2, 'trade_amount':1}}
-autotrade = False
+autotrade_stocks = {'AAPL':{'trade_amount':1, 'trade_type':2}}
+autotrade = True
 tickers = []
 stock_status = {}
 robin_actions = {}
@@ -71,20 +69,25 @@ for stock in stock_list:
 		stockbot.display()
 
 	if autotrade:
+		holdings = r.build_holdings()
+		for key,value in holdings.items():
+			print(key, value)
 		if analysis == 'Buy':
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
-					r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
-					robin_actions[stock] = "Bought"
-					logging.info("Bought {}".format(stock))
-					if args.verbose == 1:
-						print("Bought {}".format(stock))
+					if holdings[stock]['quantity'] < 1:
+						r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
+						robin_actions[stock] = "Bought"
+						logging.info("Bought {}".format(stock))
+						if args.verbose == 1:
+							print("Bought {}".format(stock))
 		elif analysis == 'Sell':
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (1, 2):
-					r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
-					robin_actions[stock] = "Sold"
-					logging.info("Sold {}".format(stock))
-					if args.verbose == 1:
-						print("Sold {}".format(stock))
+					if holdings[stock]['quantity'] > 0:
+						r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
+						robin_actions[stock] = "Sold"
+						logging.info("Sold {}".format(stock))
+						if args.verbose == 1:
+							print("Sold {}".format(stock))
 
 sent_from = gmail_user
 subject = 'Stock Status Update'
