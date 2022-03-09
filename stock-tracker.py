@@ -145,7 +145,7 @@ for to in to_list:
 		s.quit()
 		if args.verbose == 1:
 			print(f"Email sent to {to}")
-		logging.info(f"Email sent to {to}")
+		logging.info(f"Email sent to {to} at {datetime.now()}")
 	except Exception as ex:
 		logging.error(f"Failed to send email to {to}")
 		logging.warning(f"{ex}")
