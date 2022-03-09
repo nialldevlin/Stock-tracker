@@ -4,13 +4,6 @@ import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from collections import deque
-import argparse
-import pickle
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-v', '--verbose', action='count', default=0)
-args = parser.parse_args()
 
 class Stockalyzer:
 	def __init__(self, stock, ticker, history, short_avg=200, long_avg=1000, pgd=8, sda=2):
@@ -40,7 +33,7 @@ class Stockalyzer:
 		Return: string 'Buy', 'Sell', or 'Hold'
 		"""
 		data = self.getStockData()
-		return runAnalysis(data)
+		return self.runAnalysis(data)
 
 	def runAnalysis(self, dataset):
 		"""
@@ -56,13 +49,13 @@ class Stockalyzer:
 		short_avg = dataset[-1 * self.short_avg:].mean()
 		long_avg = dataset[-1 * self.long_avg:].mean()
 		if short_avg - long_avg > self.pgd and short_avg - long_avg < self.pgd + self.sda:
-			analysis = 'Buy'
+			self.analysis = 'Buy'
 			return 'Buy'
 		elif long_avg - short_avg > self.pgd and long_avg - short_avg < self.pgd + self.sda:
-			analysis = 'Sell'
+			self.analysis = 'Sell'
 			return 'Sell'
 		else:
-			analysis = 'Hold'
+			self.analysis = 'Hold'
 			return 'Hold'
 
 	def getStockData(self):
@@ -75,7 +68,7 @@ class Stockalyzer:
 		"""
 		Returns current price of stock
 		"""
-		return self.ticker.info['currentPrice']
+		return self.history['Close'][-1]
 
 	def display(self):
 		"""
@@ -83,11 +76,11 @@ class Stockalyzer:
 		"""
 		hist = self.getStockData()
 		hist.plot(label="{} data".format(self.stock))
-		if analysis = 'Buy':
+		if self.analysis == 'Buy':
 			color = 'chartreuse'
-		elif analysis = 'Sell':
+		elif self.analysis == 'Sell':
 			color = 'r'
-		elif analysis = 'Hold':
+		elif self.analysis == 'Hold':
 			color = 'dimgray'
 		rl_avg_s = hist.rolling(window=self.short_avg).mean()
 		rl_avg_s.plot(color=color, label="{} rolling average short ({:.2f})".format(self.stock, self.short_avg))
@@ -95,7 +88,7 @@ class Stockalyzer:
 		rl_avg_l.plot(color='orchid', label="{} rolling average short ({:.2f})".format(self.stock, self.long_avg))
 		plt.xlabel("Date")
 		plt.ylabel("Price")
-		plt.title("{} Stock Data: {} at {:.2f}".format(stock, analysis, self.getCurrentPrice()))
+		plt.title("{} Stock Data: {} at {:.2f}".format(self.stock, self.analysis, self.getCurrentPrice()))
 		plt.legend(loc='upper left')
 		plt.show()
 		plt.clf()
@@ -105,15 +98,15 @@ class Stockalyzer:
 		Saves graph as png to filename
 		If none specified, defaults to {stock}.png
 		"""
-		if !filename:
-			filename = '{}.png'.format(stock)
+		if filename == '':
+			filename = '{}.png'.format(self.stock)
 		hist = self.getStockData()
 		hist.plot(label="{} data".format(self.stock))
-		if analysis = 'Buy':
+		if self.analysis == 'Buy':
 			color = 'chartreuse'
-		elif analysis = 'Sell':
+		elif self.analysis == 'Sell':
 			color = 'r'
-		elif analysis = 'Hold':
+		elif self.analysis == 'Hold':
 			color = 'dimgray'
 		rl_avg_s = hist.rolling(window=self.short_avg).mean()
 		rl_avg_s.plot(color=color, label="{} rolling average short ({:.2f})".format(self.stock, self.short_avg))
@@ -121,12 +114,12 @@ class Stockalyzer:
 		rl_avg_l.plot(color='orchid', label="{} rolling average short ({:.2f})".format(self.stock, self.long_avg))
 		plt.xlabel("Date")
 		plt.ylabel("Price")
-		plt.title("{} Stock Data: {} at {:.2f}".format(stock, analysis, self.getCurrentPrice()))
+		plt.title("{} Stock Data: {} at {:.2f}".format(self.stock, self.analysis, self.getCurrentPrice()))
 		plt.legend(loc='upper left')
 		plt.savefig(filename)
 		plt.clf()
 
-	def runSimulation(self, startingBalance, buyAmount, startingStock=0):
+	def runSimulation(self, startingBalance, buyAmount, startingStock=0, verbose=False):
 		"""
 		Runs simulation on stock history. Analysis is run on stock data to a certain date
 		Starts with given balance and starting stock (default 0) and invests based on
@@ -147,23 +140,23 @@ class Stockalyzer:
 			if len(data_slice) > self.short_avg:
 				current_price = data_slice[-1]
 				analysis = runAnalysis(data_slice)
-				if analysis == 'Buy'
+				if analysis == 'Buy':
 					if ba * current_price <= balance:
 						balance -= ba * current_price
 						num_stock += ba
-						if args.verbose:
+						if verbose:
 							print("Bought {} of {} at {}".format(ba, self.stock, current_price))
 					else:
-						if args.verbose:
+						if verbose:
 							print("Not Bought {} of {} at {}".format(ba, self.stock, current_price))
-				elif analysis == 'Sell'
+				elif analysis == 'Sell':
 					if num_stock >= ba:
 						balance += ba * current_price
 						num_stock -= ba
-						if args.verbose:
+						if verbose:
 							print("Sold {} of {} at {}".format(ba, self.stock, current_price))
 					else:
-						if args.verbose:
+						if verbose:
 							print("Not Sold {} of {} at {}".format(ba, self.stock, current_price))
 				else:
 					if printHold:
