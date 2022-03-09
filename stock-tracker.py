@@ -111,22 +111,16 @@ for to in to_list:
 	for stock in stock_list:
 		# set attachment mime and file name, the image type is png
 		stock_img_file = f"{stock}.png"
-		try:
-			with open(stock_img_file, 'rb') as f:
-				mime = MIMEImage(f.read(), name=os.path.basename(stock_img_file))
-				# add required header data:
-				mime.add_header('Content-Disposition', 'attachment', filename=stock_img_file)
-				mime.add_header('X-Attachment-Id', '0')
-				mime.add_header('Content-ID', '<0>')
-				# encode with base64
-				encoders.encode_base64(mime)
-				# add MIMEBase object to MIMEMultipart object
-				msg.attach(mime)
-
-		except:
-			if args.verbose == 1:
-				print(f"Failed to attach file {stock_img_file}")
-			logging.warning(f"Failed to attach file {stock_img_file}")
+		with open(stock_img_file, 'rb') as f:
+			mime = MIMEImage(f.read(), name=os.path.basename(stock_img_file))
+			# add required header data:
+			mime.add_header('Content-Disposition', 'attachment', filename=stock_img_file)
+			mime.add_header('X-Attachment-Id', '0')
+			mime.add_header('Content-ID', '<0>')
+			# encode with base64
+			encoders.encode_base64(mime)
+			# add MIMEBase object to MIMEMultipart object
+			msg.attach(mime)
 
 	try:
 		s = smtplib.SMTP('smtp.gmail.com', 587)

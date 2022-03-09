@@ -1,2 +1,18 @@
 INFO:root:Email sent to niallcdevlin@gmail.com
 INFO:root:Email sent to niallcdevlin@gmail.com
+WARNING:root:Failed to attach file MSFT.png
+WARNING:root:Failed to attach file VOO.png
+WARNING:root:Failed to attach file VTI.png
+WARNING:root:Failed to attach file COST.png
+WARNING:root:Failed to attach file AMZN.png
+WARNING:root:Failed to attach file AAPL.png
+WARNING:root:Failed to attach file BAC.png
+ERROR:root:Failed to send email to niallcdevlin@gmail.com
+WARNING:root:Failed to attach file MSFT.png
+WARNING:root:Failed to attach file VOO.png
+WARNING:root:Failed to attach file VTI.png
+WARNING:root:Failed to attach file COST.png
+WARNING:root:Failed to attach file AMZN.png
+WARNING:root:Failed to attach file AAPL.png
+WARNING:root:Failed to attach file BAC.png
+ERROR:root:Failed to send email to niallcdevlin@gmail.com
