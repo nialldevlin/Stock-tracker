@@ -111,14 +111,13 @@ class Stockalyzer:
 
 	def display(self):
 		hist = self.getStockData()
-		#hist.plot(label="{} data".format(self.stock))
-		"""rl_avg_s = hist.rolling(window=self.short_avg)
+		hist.plot(label="{} data".format(self.stock))
+		rl_avg_s = hist.rolling(window=self.short_avg).mean()
 		print(rl_avg_s)
 		rl_avg_s.plot(label="{} rolling average short ({})".format(self.stock, self.short_avg))
-		rl_avg_l = hist.rolling(window=self.long_avg)
-		rl_avg_l.plot(label="{} rolling average short ({})".format(self.stock, self.long_avg))"""
-		diff = hist.diff()
-		diff.plot(label="Difference in price")
+		rl_avg_l = hist.rolling(window=self.long_avg).mean()
+		rl_avg_l.plot(label="{} rolling average short ({})".format(self.stock, self.long_avg))
+		plt.legend(loc="upper left")
 		plt.show()
 
 	def runSimulation(self, startingBalance, buyAmount):
@@ -138,39 +137,28 @@ class Stockalyzer:
 				if args.verbose:
 					print('Current Price: {:.2f}, Current Derivative: {}, {}'.format(current_price, ma_derivative, last_ma_derivative))
 				printHold = False
-				if abs(ma_derivative) <= self.pdg: # flat, turn point, hold till rise/drop
-					if printHold:
-						print('Hold')
-				elif ma_derivative > self.pdg: # rising
-					if abs(last_ma_derivative) <= self.pdg:# and last_transaction != 'Buy': # If last was turn point and rising, buy
-						if ba * current_price <= balance:
-							balance -= ba * current_price
-							num_stock += ba
-							last_transaction = 'Buy'
-							last_price = current_price
-							if args.verbose:
-								print("Bought {} of {} at {}".format(ba, self.stock, current_price))
-						else:
-							if args.verbose:
-								print("Not Bought {} of {} at {}".format(ba, self.stock, current_price))
-					else: # was rising, hold
-						if printHold:
-							print('Hold')
-				elif ma_derivative < -1 * self.pdg: # falling
-					if abs(last_ma_derivative) <= self.pdg :# and last_transaction != 'Sell':  If last was turn point and falling, sell
-						if num_stock >= ba:
-							balance += ba * current_price
-							num_stock -= ba
-							last_transaction = 'Sell'
-							last_price = current_price
-							if args.verbose:
-								print("Sold {} of {} at {}".format(ba, self.stock, current_price))
-						else:
-							if args.verbose:
-								print("Not Sold {} of {} at {}".format(ba, self.stock, current_price))
-					else: # was rising, hold
-						if printHold:
-							print('Hold')
+				if ma_derivative > self.pdg and last_ma_derivative <= 0:
+					if ba * current_price <= balance:
+						balance -= ba * current_price
+						num_stock += ba
+						last_transaction = 'Buy'
+						last_price = current_price
+						if args.verbose:
+							print("Bought {} of {} at {}".format(ba, self.stock, current_price))
+					else:
+						if args.verbose:
+							print("Not Bought {} of {} at {}".format(ba, self.stock, current_price))
+				elif ma_derivative < -1 * self.pdg and last_ma_derivative >= 0:
+					if num_stock >= ba:
+						balance += ba * current_price
+						num_stock -= ba
+						last_transaction = 'Sell'
+						last_price = current_price
+						if args.verbose:
+							print("Sold {} of {} at {}".format(ba, self.stock, current_price))
+					else:
+						if args.verbose:
+							print("Not Sold {} of {} at {}".format(ba, self.stock, current_price))
 		return balance, num_stock
 
 
@@ -178,10 +166,10 @@ stock = 'MSFT'
 msft = yf.Ticker(stock)
 hist = msft.history(interval='1d', period='5y')
 #for timestamp in pd.date_range(start=(datetime.now() - timedelta(365*5)), end=datetime.now()).to_pydatetime():
-stockbot = Stockalyzer(stock, msft, hist)
+stockbot = Stockalyzer(stock, msft, hist, short_avg=10, long_avg=120, pdg=0.1)
 stockbot.display()
-balance, num_stock = stockbot.runSimulation(1000, 2)
-print("Starting from $1000, current balance ${}".format(balance + num_stock * stockbot.getCurrentPrice()))
+#balance, num_stock = stockbot.runSimulation(1000, 2)
+#print("Starting from $1000, current balance ${}".format(balance + num_stock * stockbot.getCurrentPrice()))
 """
 if analysis == 'Buy':
 	if buy_amount * data[0] <= current_balance:
