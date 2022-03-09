@@ -14,6 +14,7 @@ from datetime import datetime
 import argparse
 import yfinance as yf
 import os
+import smtplib
 
 from stock_analyzer import Stockalyzer
 from password_handler import PasswordHandler
