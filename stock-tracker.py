@@ -124,10 +124,12 @@ for to in to_list:
 				# add MIMEBase object to MIMEMultipart object
 				msg.attach(mime)
 
-		except:
+		except Exception as ex:
 			if args.verbose == 1:
 				print(f"Failed to attach file {stock_img_file}")
+                print(f"{ex}")
 			logging.warning(f"Failed to attach file {stock_img_file}")
+            logging.warning(f"{ex}")
 
 	try:
 		s = smtplib.SMTP('smtp.gmail.com', 587)
@@ -140,7 +142,9 @@ for to in to_list:
 		if args.verbose == 1:
 			print(f"Email sent to {to}")
 		logging.info(f"Email sent to {to}")
-	except:
+	except Exception as ex:
 		logging.error(f"Failed to send email to {to}")
+        logging.warning(f"{ex}")
 		if args.verbose == 1:
 			print(f"Failed to send email to {to}")
+            print(f"{ex}")
