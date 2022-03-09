@@ -1,3 +1,5 @@
+#!/home/pi/Documents/Stock-tracker/stocktracker/bin/python3
+
 import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
@@ -6,193 +8,164 @@ from collections import deque
 import argparse
 import pickle
 
-# Credit https://zhenyu0519.github.io/2020/07/08/lc346/
-
 parser = argparse.ArgumentParser()
-parser.add_argument("-v", "--verbose", help="modify output verbosity", 
-                    action = "store_true")
+parser.add_argument('-v', '--verbose', action='count', default=0)
 args = parser.parse_args()
 
-
-class MovingAverage:
-
-    def __init__(self, size: int):
-        """
-        Initialize your data structure here.
-        """
-        self.queue = deque()
-        self.size = size
-
-    def next(self, val: int) -> float:
-        if len(self.queue) == self.size:
-            self.queue.popleft()
-            self.queue.append(val)
-        else:
-            self.queue.append(val)
-        return sum(self.queue)/len(self.queue)
-
 class Stockalyzer:
-	def __init__(self, stock, ticker, history, short_avg=30, long_avg=150, pdg=2):
+	def __init__(self, stock, ticker, history, short_avg=200, long_avg=1000, pgd=8, sda=2):
+		"""
+		Class to analyze stocks. Also contains simulator to check algorithm
+		Params: stock - 4 letter stock name eg. 'MSFT'
+				ticker - yfinance stock ticker
+				history - pandas dataframe with history of stock
+				short_avg - number in hours for short term average
+				long_avg - number in hours for long term average
+				pgd - profitable gain difference. Amount (in $) difference between averages considered signifigant
+				sda - signal dollar amount. Once difference is past pgd + sda, hold while rise/fall
+		"""
 		self.stock = stock
+		self.analysis = ''
 		self.short_avg = short_avg
 		self.long_avg = long_avg
 		self.ticker = ticker
 		self.history = history
-		self.pdg = pdg
+		self.pgd = pgd
+		self.sda = sda
 
-	def getAnalysis(self, last_transaction, last_price):
+	def getAnalysis(self):
 		"""
 		Returns an analysis of given stock in terms of a buy,
-		sell, or hold position.
+		sell, or hold position. Estimated 9% gain
 		Return: string 'Buy', 'Sell', or 'Hold'
 		"""
-		last_s_avg = self.history['Close'].tail(self.short_avg).mean()
-		last_l_avg = self.history['Close'].tail(self.long_avg).mean()
-		current_price = self.history['Close'][-1]
-		last_price = self.history['Close'][-2]
-		last_last_price = self.history['Close'][-3]
-		ma_derivative = current_price - last_price
-		last_ma_derivative = last_price - last_last_price
-		if args.verbose:
-			print('Current Price: {:.2f}, Current Derivative: {}'.format(current_price, ma_derivative))
+		data = self.getStockData()
+		return runAnalysis(data)
 
-		if abs(ma_derivative) <= self.pdg: # flat, turn point, hold till rise/drop
+	def runAnalysis(self, dataset):
+		"""
+		If short term average is above long term average by
+		pgd, stock is rising. Send buy signal until difference
+		is above pgd + sda. If short term average is below long term
+		average by same criteria, send sell signal While stock
+		is rising/falling and buy/sell signal is over, send
+		hold signal.
+		Params: dataset to analyze
+		Return: string 'Buy', 'Sell', or 'Hold'
+		"""
+		short_avg = dataset[-1 * self.short_avg:].mean()
+		long_avg = dataset[-1 * self.long_avg:].mean()
+		if short_avg - long_avg > self.pgd and short_avg - long_avg < self.pgd + self.sda:
+			analysis = 'Buy'
+			return 'Buy'
+		elif long_avg - short_avg > self.pgd and long_avg - short_avg < self.pgd + self.sda:
+			analysis = 'Sell'
+			return 'Sell'
+		else:
+			analysis = 'Hold'
 			return 'Hold'
-		elif ma_derivative > self.pdg: # rising
-			# If last was turn point and haven't bought and rising, buy
-			if abs(last_ma_derivative) <= self.pdg and last_transaction != 'Buy': 
-				return 'Buy'
-			else: # was rising or already bought, hold
-				return 'Hold'
-		elif ma_derivative < -1 * self.pdg: # falling
-			# If last was turn point and havent sold and falling, sell
-			if abs(last_ma_derivative) <= self.pdg and last_transaction != 'Sell':
-				return 'Sell'
-			else: # was rising or already sold, hold
-				return 'Hold'
-
-		"""		
-		print(hist_d_plt)
-
-		if abs(ma_derivative) <= 1: # if flat, at turn point. Wait till rise/fall to buy/sell
-			new_mode = ('t', )
-		elif ma_derivative > 1: # Rising
-			new_mode = 'r'
-		elif ma_derivative < -1: # falling
-			new_mode = 'f'
-
-		if new_mode != 't':
-			modes.reverse()
-			i = 0
-			last_not_flat = modes[i]
-			while last_not_flat == 't': #In case its  been flat for a while
-				i += 1
-				last_not_flat = modes[i]
-			if last_not_flat == 'f': # was falling last
-				if new_mode == 'r': # now rising, buy
-					if args.verbose:
-						print("Buy {} at {}".format(stock, current_price))
-					return 'Buy'
-				elif new_mode == 'f': # still falling, hold
-					return 'Hold'
-			elif last_not_flat == 'r': # was rising last
-				if new_mode == 'f': # now falling, sell
-					if args.verbose:
-						print("Sell {} at {}".format(stock, current_price))
-					return 'Sell'
-				elif new_mode == 'r': # still rising, hold
-					return 'Hold'"""
 
 	def getStockData(self):
+		"""
+		Return stock close for each period in history
+		"""
 		return self.history['Close']
 
 	def getCurrentPrice(self):
+		"""
+		Returns current price of stock
+		"""
 		return self.ticker.info['currentPrice']
 
 	def display(self):
+		"""
+		Displays graph of stock and averages with matplotlib
+		"""
 		hist = self.getStockData()
 		hist.plot(label="{} data".format(self.stock))
+		if analysis = 'Buy':
+			color = 'chartreuse'
+		elif analysis = 'Sell':
+			color = 'r'
+		elif analysis = 'Hold':
+			color = 'dimgray'
 		rl_avg_s = hist.rolling(window=self.short_avg).mean()
-		print(rl_avg_s)
-		rl_avg_s.plot(label="{} rolling average short ({})".format(self.stock, self.short_avg))
+		rl_avg_s.plot(color=color, label="{} rolling average short ({:.2f})".format(self.stock, self.short_avg))
 		rl_avg_l = hist.rolling(window=self.long_avg).mean()
-		rl_avg_l.plot(label="{} rolling average short ({})".format(self.stock, self.long_avg))
-		plt.legend(loc="upper left")
+		rl_avg_l.plot(color='orchid', label="{} rolling average short ({:.2f})".format(self.stock, self.long_avg))
+		plt.xlabel("Date")
+		plt.ylabel("Price")
+		plt.title("{} Stock Data: {} at {:.2f}".format(stock, analysis, self.getCurrentPrice()))
+		plt.legend(loc='upper left')
 		plt.show()
+		plt.clf()
 
-	def runSimulation(self, startingBalance, buyAmount):
+	def saveAsPng(self, filename=''):
+		"""
+		Saves graph as png to filename
+		If none specified, defaults to {stock}.png
+		"""
+		if !filename:
+			filename = '{}.png'.format(stock)
+		hist = self.getStockData()
+		hist.plot(label="{} data".format(self.stock))
+		if analysis = 'Buy':
+			color = 'chartreuse'
+		elif analysis = 'Sell':
+			color = 'r'
+		elif analysis = 'Hold':
+			color = 'dimgray'
+		rl_avg_s = hist.rolling(window=self.short_avg).mean()
+		rl_avg_s.plot(color=color, label="{} rolling average short ({:.2f})".format(self.stock, self.short_avg))
+		rl_avg_l = hist.rolling(window=self.long_avg).mean()
+		rl_avg_l.plot(color='orchid', label="{} rolling average short ({:.2f})".format(self.stock, self.long_avg))
+		plt.xlabel("Date")
+		plt.ylabel("Price")
+		plt.title("{} Stock Data: {} at {:.2f}".format(stock, analysis, self.getCurrentPrice()))
+		plt.legend(loc='upper left')
+		plt.savefig(filename)
+		plt.clf()
+
+	def runSimulation(self, startingBalance, buyAmount, startingStock=0):
+		"""
+		Runs simulation on stock history. Analysis is run on stock data to a certain date
+		Starts with given balance and starting stock (default 0) and invests based on
+		analysis.
+		Params: startingbalance - amount to start with in $
+				buyAmount - amount of stock to buy each time
+				startingStock - amount of stock to start with
+		Return: ending balance, number of stock
+		"""
 		balance = startingBalance
 		ba = buyAmount
-		num_stock = 0
-		data = self.getStockData()
+		num_stock = startingStock
+		data = self.getStockData().values
 		last_transaction = ''
 		last_price = 0
-		for index, price in zip(data.index, data):
-			data_slice = data[:index]
-			if len(data_slice) > 20:
+		for i in range(self.short_avg, data.size):
+			data_slice = data[:i]
+			if len(data_slice) > self.short_avg:
 				current_price = data_slice[-1]
-				last_price = data_slice[-2]
-				ma_derivative = data_slice.diff().tail(self.short_avg).mean()
-				last_ma_derivative = data_slice.diff().tail(self.long_avg).mean()
-				if args.verbose:
-					print('Current Price: {:.2f}, Current Derivative: {}, {}'.format(current_price, ma_derivative, last_ma_derivative))
-				printHold = False
-				if ma_derivative > self.pdg and last_ma_derivative <= 0:
+				analysis = runAnalysis(data_slice)
+				if analysis == 'Buy'
 					if ba * current_price <= balance:
 						balance -= ba * current_price
 						num_stock += ba
-						last_transaction = 'Buy'
-						last_price = current_price
 						if args.verbose:
 							print("Bought {} of {} at {}".format(ba, self.stock, current_price))
 					else:
 						if args.verbose:
 							print("Not Bought {} of {} at {}".format(ba, self.stock, current_price))
-				elif ma_derivative < -1 * self.pdg and last_ma_derivative >= 0:
+				elif analysis == 'Sell'
 					if num_stock >= ba:
 						balance += ba * current_price
 						num_stock -= ba
-						last_transaction = 'Sell'
-						last_price = current_price
 						if args.verbose:
 							print("Sold {} of {} at {}".format(ba, self.stock, current_price))
 					else:
 						if args.verbose:
 							print("Not Sold {} of {} at {}".format(ba, self.stock, current_price))
+				else:
+					if printHold:
+						print("Hold {} at {}".format(self.stock, current_price))
 		return balance, num_stock
-
-
-stock = 'MSFT'
-msft = yf.Ticker(stock)
-hist = msft.history(interval='1d', period='5y')
-#for timestamp in pd.date_range(start=(datetime.now() - timedelta(365*5)), end=datetime.now()).to_pydatetime():
-stockbot = Stockalyzer(stock, msft, hist, short_avg=10, long_avg=120, pdg=0.1)
-stockbot.display()
-#balance, num_stock = stockbot.runSimulation(1000, 2)
-#print("Starting from $1000, current balance ${}".format(balance + num_stock * stockbot.getCurrentPrice()))
-"""
-if analysis == 'Buy':
-	if buy_amount * data[0] <= current_balance:
-		current_balance -= buy_amount * data[0]
-		num_stock += buy_amount
-		if args.verbose:
-			print("Bought {} of {} at {}".format(buy_amount, stock[0], data[0]))
-	else:
-		if args.verbose:
-			print("Not Bought {} of {} at {}".format(buy_amount, stock[0], data[0]))
-elif analysis == 'Sell':
-	if num_stock >= buy_amount:
-		current_balance += buy_amount * data[0]
-		num_stock -= buy_amount
-		if args.verbose:
-			print("Sold {} of {} at {}".format(buy_amount, stock[0], data[0]))
-	else:
-		if args.verbose:
-			print("Not Sold {} of {} at {}".format(buy_amount, stock[0], data[0]))
-else:
-	if args.verbose:
-		print("Hold {} - {}".format(stock[0], data[0]))
-net = current_balance + (num_stock * price)
-print('Current balance: ${:.2f}'.format(current_balance))
-print('Current stock: {}'.format(num_stock))
-print('Net amount: {:.2f}'.format(current_balance + num_stock * t.info['currentPrice']))"""

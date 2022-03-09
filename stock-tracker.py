@@ -1,12 +1,8 @@
 #!/home/pi/Documents/Stock-tracker/stocktracker/bin/python3
 
-import yfinance as yf
-import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 from email.message import EmailMessage
-import smtplib
-import pickle
-import os
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
@@ -14,6 +10,8 @@ from email import encoders
 import telegram_send as ts
 import logging
 import robin_stocks as r
+from stock_analyzer import Stockalyzer
+from datetime import datetime
 
 # Logging
 logging.basicConfig(filename='stocktracker.log', encoding='utf-8', level=logging.INFO)
@@ -25,108 +23,54 @@ gmail_password = 'Stock$$69420' #os.environ['GMAIL_PASSWORD']
 to_list = ['niallcdevlin@gmail.com'] #[os.environ['TO_LIST']]
 
 # Stock lists
-stock_list = ['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']
+stock_list = np.array(['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC'])
 # 0 - Buy, 1 - Sell, 2 - Both
-autotrade_stocks = {}#{'MSFT':{'trade_type':2, 'trade_amount':1},
-                    #'VOO':{'trade_type':1, 'trade_amount':1}}
-tickers = []
+autotrade_stocks = {'MSFT':{'trade_type':2, 'trade_amount':1},
+                    'VOO':{'trade_type':2, 'trade_amount':1}
+                    'VTI':{'trade_type':2, 'trade_amount':1}}
+autotrade = False
+tickers = np.array()
 stock_status = {}
-important_updates = {}
+robin_actions = {}
 
-# Create stock tickers, get history, calculate stats
+# Create stock tickers, get history run analysis
 for stock in stock_list:
 	current_ticker = yf.Ticker(stock)
 	tickers.append(current_ticker)
 	hist = current_ticker.history(period='1y', interval='1h')
-	hist_close = hist['Close']
-	avg_20 = hist_close.tail(n=20).mean()
-	avg_50 = hist_close.tail(n=50).mean()
-	last_50 = hist_close.tail(n=50)
-	last_50.plot(label="{} last 50 day data".format(stock))
+	stockbot = Stockalyzer(stock, current_ticker, hist)
+	analysis = stockbot.getAnalysis()
+	price = stockbot.getCurrentPrice()
+	stockbot.saveAsPng(f"{stock}.png")
+	stock_status[stock] = {'analysis':analysis, 'price':price}
 
-	# Compare stats
-	if avg_20 > avg_50:
-		color = 'g'
-	else:
-		color = 'r'
-
-	# Get old stats
-	try:
-		with open('{}.pkl'.format(stock), 'rb') as f:
-			old_stats = pickle.load(f)
-			f.close()
-	except:
-		old_stats = ""
-	# Dump new ones
-	stats = {'avg_20':avg_20, 'avg':avg_50, '{}_diff'.format(stock):avg_20 - avg_50}
-	with open('{}.pkl'.format(stock), 'wb') as f:
-		pickle.dump(stats, f)
-		f.close()
-
-	plt.axhline(y=avg_20, color=color, linestyle='-', label='20 day average')
-	plt.axhline(y=avg_50, color='b', linestyle='-', label='50 day average')
-	plt.xlabel("Date")
-	plt.ylabel("Price")
-	plt.title("{} Stock Data".format(stock))
-	plt.legend(loc='upper left')
-	plt.savefig('{}.png'.format(stock))
-	plt.clf()
-
-	# 0 down 1 up
-	old_trend = 0
-	new_trend = 0
-	email_msg = "Heres some text so we dont look like scammers"
-
-	if (old_stats):
-		if(old_stats['{}_diff'.format(stock)] > 0):
-			old_trend = 1
-		if(stats['{}_diff'.format(stock)] > 0):
-			new_trend = 1
-
-		if (old_trend == new_trend):
-			if (new_trend == 1):
-				print(f"{stock} rising")
-				stock_status[stock] = f"{stock} rising"
-			else:
-				print(f"{stock} falling")
-				stock_status[stock] = f"{stock} falling"
-			
-		else:
-			b_or_s = ""
-			if (old_trend == 0 and new_trend == 1):
+	if autotrade:
+		if analysis = 'Buy':
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
 					r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
-					b_or_s = "Bought"
-				else:
-					b_or_s = "Buy"
-
-			elif(old_trend == 1 and new_trend == 0):
+					robin_actions[stock] = "Bought"
+					logging.info("Bought {}".format(stock))
+		elif analysis = 'Sell':
 				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (1, 2):
 					r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
-					b_or_s = "Sold"
-				else:
-					b_or_s = "Sell"
-			msg = "{} {} at {:.2f}".format(b_or_s, stock, current_ticker.info['currentPrice'])
-			important_updates[stock] = msg
-			print(msg)
+					robin_actions[stock] = "Sold"
+					logging.info("Sold {}".format(stock))
 
 r.export_completed_stock_orders(".")
 sent_from = gmail_user
 subject = 'Stock Status Update'
-body = ""
-if important_updates:
-    messages = []
-    body += "Important Updates (Buy/Sell)\n\n"
-    for stock in important_updates:
-        messages.append(important_updates[stock])
-        body += important_updates[stock]
-        body += "\n"
-    ts.send(messages=messages)
+body = "Stockalyzer analysis at {} \n\n".format(datetime.now().strftime("%A, %B %d %H:%M"))
 
-body += "\n\nOther Stocks (Rising/Falling) Skip to the end for charts (see attachments)\n\n"
+messages = []
 for stock in stock_status:
-	body += stock_status[stock]
-	body += "\n"
+	analysis = stock_status[stock]['analysis']
+	price = stock_status[stock]['price']
+	stock_line = "{} {} at {}\n".format(analysis, stock, price)
+	body += stock_line
+	if analysis in ('Buy', 'Sell'):
+		messages.append(stock_line)
+
+ts.send(messages=messages)
 
 for to in to_list:
     msg = MIMEMultipart()
