@@ -75,6 +75,8 @@ class Stockalyzer:
 		Displays graph of stock and averages with matplotlib
 		"""
 		hist = self.getStockData()
+		short_avg = hist[-1 * self.short_avg:].mean()
+		long_avg = hist[-1 * self.long_avg:].mean()
 		hist.plot(label="{} data".format(self.stock))
 		if self.analysis == 'Buy':
 			color = 'chartreuse'
@@ -88,6 +90,8 @@ class Stockalyzer:
 		rl_avg_l.plot(color='orchid', label="{} rolling average short ({:.2f})".format(self.stock, self.long_avg))
 		plt.xlabel("Date")
 		plt.ylabel("Price")
+		plt.axline(short_avg, label='{} current short average {:.2f}'.format(self.stock, short_avg))
+		plt.axline(long_avg, label='{} current short average {:.2f}'.format(self.stock, long_avg))
 		plt.title("{} Stock Data: {} at {:.2f}".format(self.stock, self.analysis, self.getCurrentPrice()))
 		plt.legend(loc='upper left')
 		plt.show()
@@ -101,6 +105,8 @@ class Stockalyzer:
 		if filename == '':
 			filename = '{}.png'.format(self.stock)
 		hist = self.getStockData()
+		short_avg = hist[-1 * self.short_avg:].mean()
+		long_avg = hist[-1 * self.long_avg:].mean()
 		hist.plot(label="{} data".format(self.stock))
 		if self.analysis == 'Buy':
 			color = 'chartreuse'
@@ -114,6 +120,8 @@ class Stockalyzer:
 		rl_avg_l.plot(color='orchid', label="{} rolling average short ({:.2f})".format(self.stock, self.long_avg))
 		plt.xlabel("Date")
 		plt.ylabel("Price")
+		plt.axline(short_avg, label='{} current short average {:.2f}'.format(self.stock, short_avg))
+		plt.axline(long_avg, label='{} current short average {:.2f}'.format(self.stock, long_avg))
 		plt.title("{} Stock Data: {} at {:.2f}".format(self.stock, self.analysis, self.getCurrentPrice()))
 		plt.legend(loc='upper left')
 		plt.savefig(filename)
