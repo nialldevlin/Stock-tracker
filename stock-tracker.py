@@ -94,7 +94,7 @@ messages = []
 for stock in stock_status:
 	analysis = stock_status[stock]['analysis']
 	price = stock_status[stock]['price']
-	stock_line = "{} {} at {}\n".format(analysis, stock, price)
+	stock_line = "{} {} at {:.2f}\n".format(analysis, stock, price)
 	body += stock_line
 	if analysis in ('Buy', 'Sell'):
 		messages.append(stock_line)
