@@ -18,3 +18,6 @@ WARNING:root:Failed to attach file BAC.png
 ERROR:root:Failed to send email to niallcdevlin@gmail.com
 ERROR:root:Failed to send email to niallcdevlin@gmail.com
 INFO:root:Bought AAPL
+INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-09 16:22:47.428263
+INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-09 17:38:54.435959
+INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-10 01:12:48.889901

@@ -38,7 +38,6 @@ to_list = ['niallcdevlin@gmail.com']
 
 # Robinhood
 r_user = 'devnomitron'
-ph.storePassword(r_user, 'ncd118*ABC')
 r_pass = ph.getPassword(r_user)
 login = r.login(r_user,r_pass)
 
