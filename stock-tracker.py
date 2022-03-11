@@ -32,12 +32,14 @@ ph = PasswordHandler()
 
 # Email
 gmail_user = 'stocknomitron@gmail.com'
+ph.storePassword(gmail_user, 'Stock$42069')
 gmail_password = ph.getPassword(gmail_user)
 
 to_list = ['niallcdevlin@gmail.com']
 
 # Robinhood
 r_user = 'devnomitron'
+ph.storePassword(r_user, 'ncd118*ABC')
 r_pass = ph.getPassword(r_user)
 login = r.login(r_user,r_pass)
 
