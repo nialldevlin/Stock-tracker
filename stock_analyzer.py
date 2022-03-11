@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 class Stockalyzer:
-	def __init__(self, stock, ticker, history, short_avg=200, long_avg=1000, pgd=6, sda=2):
+	def __init__(self, stock, ticker, history, short_avg=50, long_avg=200, pgd=2, sda=1):
 		"""
 		Class to analyze stocks. Also contains simulator to check algorithm
 		Params: stock - 4 letter stock name eg. 'MSFT'
@@ -23,7 +23,7 @@ class Stockalyzer:
 		self.long_avg = long_avg
 		self.ticker = ticker
 		self.history = history
-		self.pgd = pgd
+		self.pgd = 0.01 * pgd # percent
 		self.sda = sda
 
 	def getAnalysis(self):
@@ -48,10 +48,11 @@ class Stockalyzer:
 		"""
 		short_avg = dataset[-1 * self.short_avg:].mean()
 		long_avg = dataset[-1 * self.long_avg:].mean()
-		if short_avg - long_avg > self.pgd and short_avg - long_avg < self.pgd + self.sda:
+		current_price = self.getCurrentPrice()
+		if short_avg - long_avg > (self.pgd * current_price) and short_avg - long_avg < (self.pgd * current_price) + self.sda:
 			self.analysis = 'Buy'
 			return 'Buy'
-		elif long_avg - short_avg > self.pgd and long_avg - short_avg < self.pgd + self.sda:
+		elif long_avg - short_avg > (self.pgd * current_price) and long_avg - short_avg < (self.pgd * current_price) + self.sda:
 			self.analysis = 'Sell'
 			return 'Sell'
 		else:
@@ -66,17 +67,10 @@ class Stockalyzer:
 		Params: dataset to analyze
 		Return: string 'Buy', 'Sell', or 'Hold'
 		"""
-		short_avg = dataset[-1 * self.short_avg:].std()
+		short_avg = dataset[-1 * self.short_avg:].mean()
 		current_price = self.getCurrentPrice()
-		if short_avg >= current_price and short_avg <= current_price + self.sda:
-			self.analysis = 'Buy'
-			return 'Buy'
-		elif short_avg < current_price and short_avg >= current_price - self.sda:
-			self.analysis = 'Sell'
-			return 'Sell'
-		else:
-			self.analysis = 'Hold'
-			return 'Hold'
+		if abs(short_avg - current_price) < 0.1: #Price at average
+			pass
 
 	def getStockData(self):
 		"""
@@ -105,7 +99,7 @@ class Stockalyzer:
 		rl_avg_s = hist.rolling(window=self.short_avg).mean()
 		rl_avg_s.plot(color=color, label="{} rolling average short ({:.2f})".format(self.stock, self.short_avg))
 		rl_avg_l = hist.rolling(window=self.long_avg).mean()
-		rl_avg_l.plot(color='orchid', label="{} rolling average long ({:.2f})".format(self.stock, self.long_avg))
+		rl_avg_l.plot(color='cyan', label="{} rolling average long ({:.2f})".format(self.stock, self.long_avg))
 		plt.xlabel("Date")
 		plt.ylabel("Price")
 		plt.title("{} Stock Data: {} at {:.2f}".format(self.stock, self.analysis, self.getCurrentPrice()))
@@ -155,30 +149,34 @@ class Stockalyzer:
 		data = self.getStockData().values
 		last_transaction = ''
 		last_price = 0
+		printHold = False;
 		for i in range(self.short_avg, data.size):
 			data_slice = data[:i]
 			if len(data_slice) > self.short_avg:
 				current_price = data_slice[-1]
-				analysis = runAnalysis(data_slice)
-				if analysis == 'Buy':
+				analysis = self.LongShortAvgAnalysis(data_slice)
+				if analysis == 'Buy' and last_transaction != 'Buy':
 					if ba * current_price <= balance:
 						balance -= ba * current_price
 						num_stock += ba
+						last_transaction = 'Buy'
 						if verbose:
-							print("Bought {} of {} at {}".format(ba, self.stock, current_price))
+							print("Bought {} of {} at {:.2f}".format(ba, self.stock, current_price))
 					else:
 						if verbose:
-							print("Not Bought {} of {} at {}".format(ba, self.stock, current_price))
-				elif analysis == 'Sell':
+							print("Not Bought {} of {} at {:.2f}".format(ba, self.stock, current_price))
+				elif analysis == 'Sell' and last_transaction != 'Sell':
 					if num_stock >= ba:
 						balance += ba * current_price
 						num_stock -= ba
+						last_transaction = 'Sell'
 						if verbose:
-							print("Sold {} of {} at {}".format(ba, self.stock, current_price))
+							print("Sold {} of {} at {:.2f}".format(ba, self.stock, current_price))
 					else:
 						if verbose:
-							print("Not Sold {} of {} at {}".format(ba, self.stock, current_price))
+							print("Not Sold {} of {} at {:.2f}".format(ba, self.stock, current_price))
 				else:
-					if printHold:
-						print("Hold {} at {}".format(self.stock, current_price))
+					if verbose:
+						if printHold:
+							print("Hold {} at {:.2f}".format(self.stock, current_price))
 		return balance, num_stock

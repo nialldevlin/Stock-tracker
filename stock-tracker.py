@@ -32,6 +32,7 @@ ph = PasswordHandler()
 
 # Email
 gmail_user = 'stocknomitron@gmail.com'
+ph.storePassword(gmail_user, 'Stock$$69420')
 gmail_password = ph.getPassword(gmail_user)
 
 to_list = ['niallcdevlin@gmail.com']
