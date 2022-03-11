@@ -4,12 +4,23 @@ import json
 class PasswordHandler:
 	def __init__(self, passFile='passwords.json', keyFile='key.key'):
 		self.filename = passFile
-		self.key = Fernet.generate_key()
+		try:
+			with open(keyFile, 'rb') as fk:
+				self.key = fk.read()
+		except:
+			self.key = Fernet.generate_key()
+			print(self.key)
+			with open(keyFile, 'wb') as fk:
+				fk.write(self.key)
 		f = Fernet(self.key)
-		with open(self.filename, 'rb') as fp:
-			encrypted_passwords = fp.read()
-		self.passwords = f.decrypt(encrypted_passwords)
-		self.passwords = json.loads(self.passwords)
+		try:
+			with open(self.filename, 'rb') as fp:
+				encrypted_passwords = fp.read()
+			self.passwords = f.decrypt(encrypted_passwords)
+			self.passwords = json.loads(self.passwords)
+		except:
+			open(self.filename, 'wb').close()
+			self.passwords = {}
 
 	def getAll(self):
 		return self.passwords
