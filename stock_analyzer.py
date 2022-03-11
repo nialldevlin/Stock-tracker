@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 class Stockalyzer:
-	def __init__(self, stock, ticker, history, short_avg=200, long_avg=1000, pgd=8, sda=2):
+	def __init__(self, stock, ticker, history, short_avg=200, long_avg=1000, pgd=6, sda=2):
 		"""
 		Class to analyze stocks. Also contains simulator to check algorithm
 		Params: stock - 4 letter stock name eg. 'MSFT'
@@ -33,9 +33,9 @@ class Stockalyzer:
 		Return: string 'Buy', 'Sell', or 'Hold'
 		"""
 		data = self.getStockData()
-		return self.runAnalysis(data)
+		return self.LongPriceAvgAnalysis(data)
 
-	def runAnalysis(self, dataset):
+	def LongShortAvgAnalysis(self, dataset):
 		"""
 		If short term average is above long term average by
 		pgd, stock is rising. Send buy signal until difference
@@ -52,6 +52,26 @@ class Stockalyzer:
 			self.analysis = 'Buy'
 			return 'Buy'
 		elif long_avg - short_avg > self.pgd and long_avg - short_avg < self.pgd + self.sda:
+			self.analysis = 'Sell'
+			return 'Sell'
+		else:
+			self.analysis = 'Hold'
+			return 'Hold'
+		
+
+	def LongPriceAvgAnalysis(self, dataset):
+		"""
+		Current stock price is compared to short term std
+		of dataset.
+		Params: dataset to analyze
+		Return: string 'Buy', 'Sell', or 'Hold'
+		"""
+		short_avg = dataset[-1 * self.short_avg:].std()
+		current_price = self.getCurrentPrice()
+		if short_avg >= current_price and short_avg <= current_price + self.sda:
+			self.analysis = 'Buy'
+			return 'Buy'
+		elif short_avg < current_price and short_avg >= current_price - self.sda:
 			self.analysis = 'Sell'
 			return 'Sell'
 		else:

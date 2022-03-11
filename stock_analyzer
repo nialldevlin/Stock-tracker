@@ -1,6 +1,0 @@
-import numpy as np
-import yfinance as yf
-import matplotlib.pyplot as plt
-
-stock_list = ['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC']
-
