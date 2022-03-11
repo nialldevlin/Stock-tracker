@@ -33,7 +33,7 @@ class Stockalyzer:
 		Return: string 'Buy', 'Sell', or 'Hold'
 		"""
 		data = self.getStockData()
-		return self.LongPriceAvgAnalysis(data)
+		return self.LongShortAvgAnalysis(data)
 
 	def LongShortAvgAnalysis(self, dataset):
 		"""
@@ -55,9 +55,8 @@ class Stockalyzer:
 		elif long_avg - short_avg > (self.pgd * current_price) and long_avg - short_avg < (self.pgd * current_price) + self.sda:
 			self.analysis = 'Sell'
 			return 'Sell'
-		else:
-			self.analysis = 'Hold'
-			return 'Hold'
+		self.analysis = 'Hold'
+		return 'Hold'
 		
 
 	def LongPriceAvgAnalysis(self, dataset):
@@ -70,7 +69,7 @@ class Stockalyzer:
 		short_avg = dataset[-1 * self.short_avg:].mean()
 		current_price = self.getCurrentPrice()
 		if abs(short_avg - current_price) < 0.1: #Price at average
-			pass
+			
 
 	def getStockData(self):
 		"""
