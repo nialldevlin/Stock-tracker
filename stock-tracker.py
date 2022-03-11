@@ -142,11 +142,11 @@ for to in to_list:
 		s.sendmail(gmail_user, to, msg.as_string())
 		s.quit()
 		if args.verbose == 1:
-			print(f"Email sent to {to}")
+			print(f"Email sent to {to} at {datetime.now()}")
 		logging.info(f"Email sent to {to} at {datetime.now()}")
 	except Exception as ex:
-		logging.error(f"Failed to send email to {to}")
+		logging.error(f"Failed to send email to {to} at {datetime.now()}")
 		logging.warning(f"{ex}")
 		if args.verbose == 1:
-			print(f"Failed to send email to {to}")
+			print(f"Failed to send email to {to} at {datetime.now()}")
 			print(f"{ex}")
