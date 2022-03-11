@@ -21,3 +21,9 @@ INFO:root:Bought AAPL
 INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-09 16:22:47.428263
 INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-09 17:38:54.435959
 INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-10 01:12:48.889901
+ERROR:root:Failed to send email to niallcdevlin@gmail.com
+WARNING:root:(535, b'5.7.8 Username and Password not accepted. Learn more at\n5.7.8  https://support.google.com/mail/?p=BadCredentials s25-20020a056a00179900b004f737ce5c1asm9965761pfg.73 - gsmtp')
+ERROR:root:Failed to send email to niallcdevlin@gmail.com
+WARNING:root:(535, b'5.7.8 Username and Password not accepted. Learn more at\n5.7.8  https://support.google.com/mail/?p=BadCredentials g28-20020a63111c000000b00374646abc42sm9050173pgl.36 - gsmtp')
+ERROR:root:Failed to send email to niallcdevlin@gmail.com
+WARNING:root:(535, b'5.7.8 Username and Password not accepted. Learn more at\n5.7.8  https://support.google.com/mail/?p=BadCredentials w5-20020a17090a6b8500b001bf564e624esm9978770pjj.39 - gsmtp')
