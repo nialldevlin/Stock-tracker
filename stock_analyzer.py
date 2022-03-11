@@ -123,7 +123,7 @@ class Stockalyzer:
 		elif self.analysis == 'Hold':
 			color = 'dimgray'
 		rl_avg_s = hist.rolling(window=self.short_avg).mean()
-		rl_avg_s.plot(color=color, label="{} rolling average short ({:.2f})".format(self.stock, self.short_avg))
+		rl_avg_s.plot(color='r', label="{} rolling average short ({:.2f})".format(self.stock, self.short_avg))
 		rl_avg_l = hist.rolling(window=self.long_avg).mean()
 		rl_avg_l.plot(color='orchid', label="{} rolling average long ({:.2f})".format(self.stock, self.long_avg))
 		plt.xlabel("Date")
