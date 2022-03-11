@@ -69,7 +69,7 @@ class Stockalyzer:
 		short_avg = dataset[-1 * self.short_avg:].mean()
 		current_price = self.getCurrentPrice()
 		if abs(short_avg - current_price) < 0.1: #Price at average
-			
+			pass
 
 	def getStockData(self):
 		"""
