@@ -1,4 +1,4 @@
-#!/home/pi/Documents/Stock-tracker/stocktracker/bin/python3
+#!!/anaconda3/bin/python
 
 import pandas as pd
 import yfinance as yf
@@ -203,6 +203,7 @@ class Stockalyzer:
 		'''
 
 		# Get date
+		# Isolate wanted technical indicators from downloaded data
 		if date == 'now':
 			current_price = float(self.price_data['1. open'].iloc[0])
 			rsi = float(self.rsi_data.iloc[0])			
@@ -221,10 +222,6 @@ class Stockalyzer:
 			macd = float(self.macd_data['MACD'][date])
 			macd_sig = float(self.macd_data['MACD_Signal'][date])
 			adr = float(self.adr_data[date])
-
-		# Isolate wanted technical indicators from downloaded data
-		# TODO fix to work with pandas
-		
 
 		# Use indicators to determine rising or falling
 		# If not all agree, in a hold position
@@ -246,7 +243,6 @@ class Stockalyzer:
 
 		return out
 
-	#TODO: FIX these after pandas refactor
 	def getPriceData(self):
 		'''
 		Return stock price for each period in history
@@ -301,6 +297,7 @@ class Stockalyzer:
 		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price')
 		plt.xlabel('Date')
 		plt.ylabel('Price')
+                plt.xticks(rotation=80)
 		plt.title('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis['analysis'], self.getCurrentPrice()))
 		plt.legend(loc='upper left')
 		plt.show()

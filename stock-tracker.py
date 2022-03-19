@@ -1,4 +1,4 @@
-#!/home/pi/Documents/Stock-tracker/stocktracker/bin/python3
+#!~/anaconda3/bin/python
 
 import matplotlib.pyplot as plt
 import numpy as np

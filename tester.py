@@ -1,4 +1,4 @@
-#!/home/pi/Documents/Stock-tracker/stocktracker/bin/python3
+#!~/anaconda3/bin/python
 from stock_analyzer import Stockalyzer
 stock = 'COST'
 s = Stockalyzer(stock, interval='60min')
