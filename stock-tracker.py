@@ -15,6 +15,7 @@ import argparse
 import yfinance as yf
 import os
 import smtplib
+import time
 
 from stock_analyzer import Stockalyzer
 from password_handler import PasswordHandler
@@ -43,22 +44,13 @@ r_pass = ph.getPassword(r_user)
 login = r.login(r_user,r_pass)
 
 # Stock lists
-stock_list = np.array(['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC'])
-# 0 - Buy, 1 - Sell, 2 - Both
-autotrade_stocks = {'AAPL':{'trade_amount':1, 'trade_type':2}}
-autotrade = True
-tickers = []
+stock_list = np.array(['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC', 'AMD'])
 stock_status = {}
-robin_actions = {}
-
 # Create stock tickers, get history run analysis
 for stock in stock_list:
-	current_ticker = yf.Ticker(stock)
-	tickers.append(current_ticker)
-	hist = current_ticker.history(period='1y', interval='1h')
-	stockbot = Stockalyzer(stock, current_ticker, hist)
-	analysis = stockbot.getAnalysis()
-	price = stockbot.getCurrentPrice()
+	stockbot = Stockalyzer(stock, interval='60min')
+	analysis = stockbot.analysis['analysis']
+	price = stockbot.analysis['current price']
 	stockbot.saveAsPng(f"{stock}.png")
 	stock_status[stock] = {'analysis':analysis, 'price':price}
 
@@ -68,39 +60,17 @@ for stock in stock_list:
 	if args.verbose == 2:
 		stockbot.display()
 
-	if autotrade:
-		holdings = r.build_holdings()
-		if analysis == 'Buy':
-				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (0, 2):
-					if float(holdings[stock]['quantity']) < 1:
-						r.order_buy_market(stock, autotrade_stocks[stock]['trade_amount'])
-						robin_actions[stock] = "Bought"
-						logging.info("Bought {}".format(stock))
-						if args.verbose == 1:
-							print("Bought {}".format(stock))
-		elif analysis == 'Sell':
-				if stock in autotrade_stocks and autotrade_stocks[stock]['trade_type'] in (1, 2):
-					if float(holdings[stock]['quantity']) > 0:
-						r.order_sell_market(stock, autotrade_stocks[stock]['trade_amount'])
-						robin_actions[stock] = "Sold"
-						logging.info("Sold {}".format(stock))
-						if args.verbose == 1:
-							print("Sold {}".format(stock))
+	time.sleep(60)
 
 sent_from = gmail_user
 subject = 'Stock Status Update'
 body = "Stockalyzer analysis at {} \n\n".format(datetime.now().strftime("%A, %B %d %H:%M"))
 
-messages = []
 for stock in stock_status:
 	analysis = stock_status[stock]['analysis']
 	price = stock_status[stock]['price']
 	stock_line = "{} {} at {:.2f}\n".format(analysis, stock, price)
 	body += stock_line
-	if analysis in ('Buy', 'Sell'):
-		messages.append(stock_line)
-
-ts.send(messages=messages)
 
 for to in to_list:
 	msg = MIMEMultipart()
