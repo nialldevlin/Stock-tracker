@@ -1,3 +1,0 @@
-#!/bin/bash
-
-while read var; do unset $var; done < <(cat .env | grev -v '^\s*#' | sed 's/\s*\([^=]*\)=.*/\1/')

@@ -1,5 +1,3 @@
-#!!/anaconda3/bin/python
-
 import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
@@ -297,7 +295,7 @@ class Stockalyzer:
 		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price')
 		plt.xlabel('Date')
 		plt.ylabel('Price')
-                plt.xticks(rotation=80)
+		plt.xticks(rotation=80)
 		plt.title('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis['analysis'], self.getCurrentPrice()))
 		plt.legend(loc='upper left')
 		plt.show()
