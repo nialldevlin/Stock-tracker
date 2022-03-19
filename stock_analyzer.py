@@ -6,7 +6,7 @@ import requests
 import json
 
 class Stockalyzer:
-	def __init__(self, ticker, interval='daily'):
+	def __init__(self, ticker, interval='daily', mode='store'):
 		'''
 		Class to analyze stocks. Also contains simulator to check algorithm
 		Params: ticker - 4 letter stock name eg. 'MSFT'
@@ -60,7 +60,7 @@ class Stockalyzer:
 
 		}
 
-		self.getTechnicalIndicators()
+		self.getTechnicalIndicators(mode=mode)
 		self.analysis = self.tiaanalysis()
 		#self.getAnalysis()
 
@@ -321,6 +321,7 @@ class Stockalyzer:
 		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price')
 		plt.xlabel('Date')
 		plt.ylabel('Price')
+		plt.xticks(rotation=80)
 		plt.title('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis['analysis'], self.getCurrentPrice()))
 		plt.legend(loc='upper left')
 		plt.savefig(filename, pad_inches = 1)

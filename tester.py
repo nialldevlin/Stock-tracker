@@ -3,7 +3,7 @@ from stock_analyzer import Stockalyzer
 stock = 'COST'
 s = Stockalyzer(stock, interval='60min')
 print(s.analysis)
-s.display()
+s.saveAsPng()
 """print(s.tiaanalysis(mode='store'))
 balance, num_stock = s.runSimulationTI(1000, 1, verbose=True)
 total = balance + num_stock * tick.info['currentPrice']

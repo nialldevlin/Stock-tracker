@@ -1,5 +1,3 @@
-#!~/anaconda3/bin/python
-
 import matplotlib.pyplot as plt
 import numpy as np
 from email.message import EmailMessage
@@ -7,9 +5,7 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email import encoders
-import telegram_send as ts
 import logging
-import robin_stocks.robinhood as r
 from datetime import datetime
 import argparse
 import yfinance as yf
@@ -23,7 +19,9 @@ from password_handler import PasswordHandler
 # Command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--verbose', action='count', default=0)
+parser.add_argument('-t', '--testing', action='store_true', default=0)
 args = parser.parse_args()
+print(args)
 
 # Logging
 logging.basicConfig(filename='stocktracker.log', encoding='utf-8', level=logging.INFO)
@@ -36,26 +34,24 @@ gmail_user = 'stocknomitron@gmail.com'
 ph.storePassword(gmail_user, 'Stock$$69420')
 gmail_password = ph.getPassword(gmail_user)
 
-to_list = ['niallcdevlin@gmail.com']
+if not args.testing:
+	to_list = ['niallcdevlin@gmail.com', 'Eric.fielenbach@gmail.com']
+	stock_list = np.array(['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC', 'AMD'])
+else:
+	to_list = ['niallcdevlin@gmail.com']
+	stock_list = np.array(['COST'])
 
-# Robinhood
-r_user = 'devnomitron'
-r_pass = ph.getPassword(r_user)
-login = r.login(r_user,r_pass)
-
-# Stock lists
-stock_list = np.array(['MSFT', 'VOO', 'VTI', 'COST', 'AMZN', 'AAPL', 'BAC', 'AMD'])
 stock_status = {}
 # Create stock tickers, get history run analysis
 for stock in stock_list:
-	stockbot = Stockalyzer(stock, interval='60min')
+	stockbot = Stockalyzer(stock, interval='60min', mode='store')
 	analysis = stockbot.analysis['analysis']
 	price = stockbot.analysis['current price']
-	stockbot.saveAsPng(f"{stock}.png")
+	stockbot.saveAsPng("{}.png".format(stock))
 	stock_status[stock] = {'analysis':analysis, 'price':price}
 
 	if args.verbose == 1:
-		print(f"{analysis} {stock} at {price}")
+		print("{} {} at {}".format(analysis, stock, price))
 
 	if args.verbose == 2:
 		stockbot.display()
@@ -83,7 +79,7 @@ for to in to_list:
 
 	for stock in stock_list:
 		# set attachment mime and file name, the image type is png
-		stock_img_file = f"{stock}.png"
+		stock_img_file = "{}.png".format(stock)
 		try:
 			with open(stock_img_file, 'rb') as f:
 				mime = MIMEImage(f.read(), name=os.path.basename(stock_img_file))
@@ -98,10 +94,10 @@ for to in to_list:
 
 		except Exception as ex:
 			if args.verbose == 1:
-				print(f"Failed to attach file {stock_img_file}")
-				print(f"{ex}")
-			logging.warning(f"Failed to attach file {stock_img_file}")
-			logging.warning(f"{ex}")
+				print("Failed to attach file {}".format(stock_img_file))
+				print("{}".format(ex))
+			logging.warning("Failed to attach file {}".format(stock_img_file))
+			logging.warning("{}".format(ex))
 
 	try:
 		s = smtplib.SMTP('smtp.gmail.com', 587)
@@ -112,11 +108,11 @@ for to in to_list:
 		s.sendmail(gmail_user, to, msg.as_string())
 		s.quit()
 		if args.verbose == 1:
-			print(f"Email sent to {to} at {datetime.now()}")
-		logging.info(f"Email sent to {to} at {datetime.now()}")
+			print("Email sent to {} at {}".format(to, datetime.now()))
+		logging.info("Email sent to {} at {}".format(to, datetime.now()))
 	except Exception as ex:
-		logging.error(f"Failed to send email to {to} at {datetime.now()}")
-		logging.warning(f"{ex}")
+		logging.error("Failed to send email to {} at {}".format(to, datetime.now()))
+		logging.warning("{}".format(ex))
 		if args.verbose == 1:
-			print(f"Failed to send email to {to} at {datetime.now()}")
-			print(f"{ex}")
+			print("Failed to send email to {} at {}".format(to, datetime.now()))
+			print("{}".format(ex))

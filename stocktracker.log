@@ -29,3 +29,5 @@ ERROR:root:Failed to send email to niallcdevlin@gmail.com
 WARNING:root:(535, b'5.7.8 Username and Password not accepted. Learn more at\n5.7.8  https://support.google.com/mail/?p=BadCredentials w5-20020a17090a6b8500b001bf564e624esm9978770pjj.39 - gsmtp')
 INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-19 07:00:45.121537
 INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-19 12:25:39.376871
+INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-19 15:27:52.700602
+INFO:root:Email sent to niallcdevlin@gmail.com at 2022-03-19 15:52:33.299807
