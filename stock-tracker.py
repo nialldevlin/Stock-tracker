@@ -44,7 +44,7 @@ else:
 stock_status = {}
 # Create stock tickers, get history run analysis
 for stock in stock_list:
-	stockbot = Stockalyzer(stock, interval='60min', mode='store')
+	stockbot = Stockalyzer(stock, interval='60min', mode='live')
 	analysis = stockbot.analysis['analysis']
 	price = stockbot.analysis['current price']
 	stockbot.saveAsPng("{}.png".format(stock))

@@ -4,6 +4,7 @@ stock = 'COST'
 s = Stockalyzer(stock, interval='60min')
 print(s.analysis)
 s.saveAsPng()
+s.display()
 """print(s.tiaanalysis(mode='store'))
 balance, num_stock = s.runSimulationTI(1000, 1, verbose=True)
 total = balance + num_stock * tick.info['currentPrice']

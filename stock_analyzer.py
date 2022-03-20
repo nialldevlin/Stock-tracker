@@ -291,8 +291,8 @@ class Stockalyzer:
 		else:
 			color = 'dimgray'
 		hist.plot(color=color, label='{} data'.format(self.stock))
-		plt.axhline(y=self.analysis['stop price'], color='r', label='Stop Price')
-		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price')
+		plt.axhline(y=self.analysis['stop price'], color='r', label='Stop Price {:.2f}'.format(self.analysis['stop price']))
+		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price{:.2f}'.format(self.analysis['sell price']))
 		plt.xlabel('Date')
 		plt.ylabel('Price')
 		plt.xticks(rotation=80)
@@ -317,8 +317,8 @@ class Stockalyzer:
 		else:
 			color = 'dimgray'
 		hist.plot(color=color, label='{} data'.format(self.stock))
-		plt.axhline(y=self.analysis['stop price'], color='r', label='Stop Price')
-		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price')
+		plt.axhline(y=self.analysis['stop price'], color='r', label='Stop Price {:.2f}'.format(self.analysis['stop price']))
+		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price {:.2f}'.format(self.analysis['sell price']))
 		plt.xlabel('Date')
 		plt.ylabel('Price')
 		plt.xticks(rotation=80)

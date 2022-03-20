@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/home/proffessordevnito/Documents/Python_Projects/Stock-tracker/stock-tracker.py", line 44, in <module>
-    stockbot = Stockalyzer(stock, interval='60min', mode='read')
-  File "/home/proffessordevnito/Documents/Python_Projects/Stock-tracker/stock_analyzer.py", line 63, in __init__
-    self.getTechnicalIndicators(mode=mode)
-  File "/home/proffessordevnito/Documents/Python_Projects/Stock-tracker/stock_analyzer.py", line 151, in getTechnicalIndicators
-    with open('price_{}.json'.format(self.stock), 'r') as f:
-FileNotFoundError: [Errno 2] No such file or directory: 'price_MSFT.json'
