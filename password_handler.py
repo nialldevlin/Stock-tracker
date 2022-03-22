@@ -9,7 +9,6 @@ class PasswordHandler:
 				self.key = fk.read()
 		except:
 			self.key = Fernet.generate_key()
-			print(self.key)
 			with open(keyFile, 'wb') as fk:
 				fk.write(self.key)
 		f = Fernet(self.key)
