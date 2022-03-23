@@ -1,5 +1,6 @@
 #!../stracker/bin/python3
 import pandas as pd
+import numpy as np
 import yfinance as yf
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -17,12 +18,10 @@ class Stockalyzer:
 			raise ValueError('interval must be daily or 60min')
 
 		self.stock = ticker
-		self.price_data = {}
-		self.rsi_data = {}
-		self.stoch_data = {}
-		self.macd_data = {}
-		self.adr_data = {}
 		self.interval = interval
+		self.analysis = ''
+		self.ti = {}
+		self.td = {}
 
 		with open('apikey.txt', 'rb') as f:
 			self.apikey = f.read()
@@ -60,10 +59,10 @@ class Stockalyzer:
 			}
 
 		}
+		self.info = pd.DataFrame()
+		self.history = pd.DataFrame()
+		self.getLongData()
 
-		self.getTechnicalIndicators(mode=mode)
-		self.analysis = self.tiaanalysis()
-		#self.getAnalysis()
 
 	# TODO: Make this better it sucks
 	def getAnalysis(self):
@@ -72,13 +71,364 @@ class Stockalyzer:
 		sell, or hold position. Estimated 9% gain
 		Return: string 'Buy', 'Sell', or 'Hold'
 		'''
-		print(self.rsi_data)
-		analysis_data = pd.DataFrame(index=self.stoch_data.index, columns=['price', 'analysis'])
-		for i in self.stoch_data.index:
-			a = self.tiaanalysis(date=i)
-			analysis_data['analysis'][i] = a['analysis']
-			analysis_data['price'][i] = a['current_price']
-		print(analysis_data)
+		return self.analysis
+	
+	def Wilder(self, data, periods):
+		start = np.where(~np.isnan(data))[0][0] #Check if nans present in beginning
+		Wilder = np.array([np.nan]*len(data))
+		Wilder[start+periods-1] = data[start:(start+periods)].mean() #Simple Moving Average
+		for i in range(start+periods,len(data)):
+			Wilder[i] = (Wilder[i-1]*(periods-1) + data[i])/periods #Wilder Smoothing
+		return(Wilder)
+	
+	def getLongData(self):
+		ticker = yf.Ticker(self.stock)
+		info = ticker.info
+		important_data = [
+			'fiftyDayAverage',
+			'twoHundredDayAverage',
+			'currentPrice',
+			'trailingPE'
+		]
+		important_info = {}
+		for i in info:
+			if i in important_data:
+				important_info[i] = info[i]
+		self.history = pd.DataFrame(ticker.history(period='1y', interval='1d'))
+		if 'currentPrice' not in important_info:
+			important_info['currentPrice'] = self.history['Close'].tail(1)[0]
+
+		self.td['price'] = self.history['Close']
+
+		#Average Daily Range
+		last_week = self.history.tail(7)
+		daily_ranges = np.array([])
+		for i in range(7):
+			dr = last_week.iloc[i]['High'] - last_week.iloc[i]['Low']
+			hc = np.abs(last_week.iloc[i]['High'] - last_week.iloc[i]['Close'])
+			lc = np.abs(last_week.iloc[i]['High'] - last_week.iloc[i]['Low'])
+			m = np.array([dr, hc, lc]).max()
+			daily_ranges = np.append(daily_ranges, m)
+		adr = np.mean(daily_ranges)
+		self.ti['adr'] = adr
+
+		#Stochastic oscillator
+		low_d = self.history['Low'].transform(lambda x: x.rolling(window = 3).min())
+		high_d = self.history['High'].transform(lambda x: x.rolling(window = 3).max())
+		low_k = self.history['Low'].transform(lambda x: x.rolling(window = 14).min())
+		high_k = self.history['High'].transform(lambda x: x.rolling(window = 14).max())
+
+		stochd = ((self.history['Close'] - low_d)/(high_d - low_d))*100
+		stochk = ((self.history['Close'] - low_k)/(high_k - low_k))*100
+
+		self.td['stochd'] = stochd.rolling(window = 3).mean()
+		self.td['stochk'] = stochk.rolling(window = 14).mean()
+
+		#self.td['stoch ratio'] = self.td['stochd s']/self.td['stochd l']
+
+		#Relative Strength Indicator
+		rsi_period = 7
+		change = self.history['Close'].diff()
+		up = change.clip(lower=0)
+		down = -1 * change.clip(upper=0)
+		avgu = up.ewm(span=rsi_period, adjust=False).mean()
+		avgd = down.ewm(span=rsi_period, adjust=False).mean()
+		rs = avgu / avgd 
+		self.td['rsi'] = 100 - (100/(1 + rs))
+		
+		#Moving Average Convergence Divergence
+		sema = self.history['Close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
+		lema = self.history['Close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+		self.td['macd'] = sema - lema
+		self.td['signal'] = self.td['macd'].transform(lambda x: x.ewm(span=9, adjust=False).mean())
+		self.td = pd.DataFrame(self.td)
+
+		rsi = self.td['rsi'].tail(1)[0]
+		self.ti['rsi'] = rsi
+		adr = self.ti['adr']
+		price = important_info['currentPrice']
+		self.ti['price'] = price
+		stochd = self.td['stochd'].tail(1)[0]
+		self.ti['stochd'] = stochd
+		stochk = self.td['stochk'].tail(1)[0]
+		stochk_d = self.td['stochk'].tail(2)[1] - self.td['stochk'].tail(2)[0]
+		self.ti['stochk'] = stochk
+		macd = self.td['macd'].tail(1)[0]
+		self.ti['macd'] = macd
+		sig = self.td['signal'].tail(1)[0]
+		self.ti['sig'] = sig
+		self.ti['sell price'] = price + 2 * adr
+		self.ti['stop price'] = price - adr
+
+		print(self.ti)
+		if rsi > 50 and stochk > 50 and stochk_d > 0 and macd > sig:
+			self.analysis = 'Rise'
+		elif rsi < 50 and stochd < 50 and macd < sig:
+			self.analysis = 'Fall'
+		else:
+			self.analysis = 'Hold'
+
+	#TODO: Display all data
+	def display(self):
+		'''
+		Displays graph of stock and averages with matplotlib
+		'''
+
+		if self.analysis == 'Rise':
+			color = 'chartreuse'
+		elif self.analysis == 'Fall':
+			color = 'r'
+		else:
+			color = 'dimgray'
+		fig, ax = plt.subplots(nrows=3)
+		ax[0].axhline(y=self.ti['stop price'], color='r', label='Stop Price {:.2f}'.format(self.ti['stop price']))
+		ax[0].axhline(y=self.ti['sell price'], color='chartreuse', label='Target Price{:.2f}'.format(self.ti['sell price']))
+		ax[0].title.set_text('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis, self.ti['price']))
+		ax[0].legend(loc='upper left')
+		ax[0].set_xlabel('Date')
+		ax[0].set_ylabel('Price')
+		ax[0].plot(self.td['price'], color=color, label='{} Price'.format(self.stock))
+		ax[1].axhline(y=50)
+		ax[1].legend(loc='upper left')
+		ax[1].set_xlabel('Date')
+		ax[1].set_ylabel('Value')
+		ax[1].title.set_text('{} Technical Indicators - RSI: {}, Stochastic: {}'.format(self.stock, self.ti['rsi'], self.ti['stochk']))
+		ax[1].plot(self.td[['rsi', 'stochk']])
+		ax[2].title.set_text('{} MACD and Signal line'.format(self.stock, self.ti['macd'], self.ti['sig']))
+		ax[2].legend(loc='upper left')
+		ax[2].plot(self.td[['macd', 'signal']])
+		plt.subplots_adjust(left=0.1,
+                    bottom=0.1,
+                    right=0.9,
+                    top=0.9,
+                    wspace=0.4,
+                    hspace=0.4)
+		plt.show()
+		plt.clf()
+
+	#TODO: FIX this too
+	def saveAsPng(self, filename=''):
+		'''
+		Saves graph as png to filename
+		If none specified, defaults to {stock}.png
+		'''
+		f = filename
+		if f == '':
+			f = '{}.png'.format(self.stock)
+		hist = self.getPriceData()[::-1]
+		if self.analysis == 'Rise':
+			color = 'chartreuse'
+		elif self.analysis == 'Fall':
+			color = 'r'
+		else:
+			color = 'dimgray'
+		fig, ax = plt.subplots(nrows=3)
+		ax[0].axhline(y=self.ti['stop price'], color='r', label='Stop Price {:.2f}'.format(self.ti['stop price']))
+		ax[0].axhline(y=self.ti['sell price'], color='chartreuse', label='Target Price{:.2f}'.format(self.ti['sell price']))
+		ax[0].title.set_text('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis, self.ti['price']))
+		ax[0].legend(loc='upper left')
+		ax[0].set_xlabel('Date')
+		ax[0].set_ylabel('Price')
+		ax[0].plot(self.td['price'], color=color, label='{} Price'.format(self.stock))
+		ax[1].axhline(y=50)
+		ax[1].legend(loc='upper left')
+		ax[1].set_xlabel('Date')
+		ax[1].set_ylabel('Value')
+		ax[1].title.set_text('{} Technical Indicators - RSI: {}, Stochastic: {}'.format(self.stock, self.ti['rsi'], self.ti['stochk']))
+		ax[1].plot(self.td[['rsi', 'stochk']])
+		ax[2].title.set_text('{} MACD and Signal line'.format(self.stock, self.ti['macd'], self.ti['sig']))
+		ax[2].legend(loc='upper left')
+		ax[2].plot(self.td[['macd', 'signal']])
+		plt.subplots_adjust(left=0.1,
+                    bottom=0.9,
+                    right=0.9,
+                    top=0.9,
+                    wspace=0.4,
+                    hspace=0.4)
+		plt.savefig(f)
+		plt.clf()
+
+#########################################################
+# Below here is legacy code
+#########################################################
+'''
+	def LongShortAvgAnalysis(self, dataset):
+		
+		If short term average is above long term average by
+		pgd, stock is rising. Send buy signal until difference
+		is above pgd + sda. If short term average is below long term
+		average by same criteria, send sell signal While stock
+		is rising/falling and buy/sell signal is over, send
+		hold signal.
+		Params: dataset to analyze
+		Return: string 'Buy', 'Sell', or 'Hold'
+		
+		short_avg = dataset[-1 * self.short_avg:].mean()
+		long_avg = dataset[-1 * self.long_avg:].mean()
+		current_price = self.getCurrentPrice()
+		if short_avg - long_avg > (self.pgd * current_price) and short_avg - long_avg < (self.pgd * current_price) + self.sda:
+			self.analysis = 'Buy'
+			return 'Buy'
+		elif long_avg - short_avg > (self.pgd * current_price) and long_avg - short_avg < (self.pgd * current_price) + self.sda:
+			self.analysis = 'Sell'
+			return 'Sell'
+		self.analysis = 'Hold'
+		return 'Hold'
+
+	def runSimulationLS(self, startingBalance, buyAmount, startingStock=0, verbose=False):
+		
+		Runs simulation on stock history. Analysis is run on stock data to a certain date
+		Starts with given balance and starting stock (default 0) and invests based on
+		analysis.
+		Params: startingbalance - amount to start with in $
+				buyAmount - amount of stock to buy each time
+				startingStock - amount of stock to start with
+		Return: ending balance, number of stock
+		
+		balance = startingBalance
+		ba = buyAmount
+		num_stock = startingStock
+		data = self.getStockData().values
+		last_transaction = ''
+		last_price = 0
+		printHold = False;
+		for i in range(self.short_avg, data.size):
+			data_slice = data[:i]
+			if len(data_slice) > self.short_avg:
+				current_price = data_slice[-1]
+				analysis = self.tiaanalysis(data_slice)
+				if analysis == 'Buy' and last_transaction != 'Buy':
+					if ba * current_price <= balance:
+						balance -= ba * current_price
+						num_stock += ba
+						last_transaction = 'Buy'
+						if verbose:
+							print('Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+					else:
+						if verbose:
+							print('Not Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+				elif analysis == 'Sell' and last_transaction != 'Sell':
+					if num_stock >= ba:
+						balance += ba * current_price
+						num_stock -= ba
+						last_transaction = 'Sell'
+						if verbose:
+							print('Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+					else:
+						if verbose:
+							print('Not Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+				else:
+					if verbose:
+						if printHold:
+							print('Hold {} at {:.2f}'.format(self.stock, current_price))
+		return balance, num_stock
+	def tiaanalysis(self, date='now'):
+	
+		Current stock price is compared to short term std
+		of dataset.
+		Params: dataset to analyze
+		Return: dictionary of
+			analysis - 'Rise', 'Fall', or 'Hold'
+			current price - price of stock
+			stop price - price to sell at to cut losses
+			sell price - target price to sell at
+		
+
+		# Get date
+		# Isolate wanted technical indicators from downloaded data
+		if date == 'now':
+			current_price = float(self.price_data['1. open'].iloc[0])
+			rsi = float(self.rsi_data.iloc[0])			
+			stochk = float(self.stoch_data['SlowK'].iloc[0])
+			stochd = float(self.stoch_data['SlowD'].iloc[0])
+			macd = float(self.macd_data['MACD'].iloc[0])
+			macd_sig = float(self.macd_data['MACD_Signal'].iloc[0])
+			adr = float(self.adr_data.iloc[0])
+		else:
+			c_date = date + ':00'
+			print(c_date)
+			current_price = float(self.price_data['1. open'][c_date])
+			rsi = float(self.rsi_data[date])			
+			stochk = float(self.stoch_data['SlowK'][date])
+			stochd = float(self.stoch_data['SlowD'][date])
+			macd = float(self.macd_data['MACD'][date])
+			macd_sig = float(self.macd_data['MACD_Signal'][date])
+			adr = float(self.adr_data[date])
+
+		# Use indicators to determine rising or falling
+		# If not all agree, in a hold position
+		if rsi > 50 and stochk > 50 and stochd > 50 and macd > macd_sig:
+			self.analysis = 'Rise'
+		elif rsi < 50 and stochk < 50 and stochd < 50 and macd < macd_sig:
+			self.analysis = 'Fall'
+		else:
+			self.analysis = 'Hold'
+
+		stop_price = current_price - adr
+		sell_price = current_price + 2 * adr
+		out = {
+			'analysis':self.analysis,
+			'current price':current_price,
+			'stop price':stop_price,
+			'sell price':sell_price
+		}
+
+		return out
+
+	def runSimulationTI(self, startingBalance, buyAmount, days=100, startingStock=0, verbose=False):
+		balance = startingBalance
+		ba = buyAmount
+		num_stock = startingStock
+		last_analysis = ''
+		current_analysis = ''
+		printHold = False;
+		stop_price = 0
+		sell_price = 0
+		for i in range(1, days+1):
+			curr_date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+			data = self.tiaanalysis(curr_date, 'read')
+			if (data['analysis'] != 'fail'):
+				last_analysis = analysis
+				current_analysis = data['analysis']
+				current_price = data['current price']
+
+				
+				If changes to buy:
+					buy if able
+					log stop/sell price
+				if changes to sell or hits stop/sell price:
+					sell if able
+
+				
+
+				if current_analysis == 'Rise' and last_analysis != 'Rise':
+					if ba * current_price <= balance:
+						balance -= ba * current_price
+						num_stock += ba
+						last_transaction = 'Buy'
+						stop_price = data['stop price']
+						sell_price = data['sell price']
+						if verbose:
+							print('Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+					else:
+						if verbose:
+							print('Not Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+				elif (analysis == 'Sell' and last_transaction != 'Sell') or current_price < stop_price or current_price > sell_price:
+					if num_stock >= ba:
+						balance += ba * current_price
+						num_stock -= ba
+						last_transaction = 'Sell'
+
+if verbose:
+							print('Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+					else:
+						if verbose:
+							print('Not Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
+				else:
+					if verbose:
+						if printHold:
+							print('Hold {} at {:.2f}'.format(self.stock, current_price))
+		return balance, num_stock
 
 	def getTechnicalIndicators(self, mode='live'):
 		# API request strings
@@ -188,271 +538,4 @@ class Stockalyzer:
 		self.adr_data = pd.DataFrame(self.adr_data['Technical Analysis: ATR']).transpose()
 		for col in self.adr_data:
 			self.adr_data[col] = self.adr_data[col].astype(float)
-
-	def tiaanalysis(self, date='now'):
-		'''
-		Current stock price is compared to short term std
-		of dataset.
-		Params: dataset to analyze
-		Return: dictionary of
-			analysis - 'Rise', 'Fall', or 'Hold'
-			current price - price of stock
-			stop price - price to sell at to cut losses
-			sell price - target price to sell at
-		'''
-
-		# Get date
-		# Isolate wanted technical indicators from downloaded data
-		if date == 'now':
-			current_price = float(self.price_data['1. open'].iloc[0])
-			rsi = float(self.rsi_data.iloc[0])			
-			stochk = float(self.stoch_data['SlowK'].iloc[0])
-			stochd = float(self.stoch_data['SlowD'].iloc[0])
-			macd = float(self.macd_data['MACD'].iloc[0])
-			macd_sig = float(self.macd_data['MACD_Signal'].iloc[0])
-			adr = float(self.adr_data.iloc[0])
-		else:
-			c_date = date + ':00'
-			print(c_date)
-			current_price = float(self.price_data['1. open'][c_date])
-			rsi = float(self.rsi_data[date])			
-			stochk = float(self.stoch_data['SlowK'][date])
-			stochd = float(self.stoch_data['SlowD'][date])
-			macd = float(self.macd_data['MACD'][date])
-			macd_sig = float(self.macd_data['MACD_Signal'][date])
-			adr = float(self.adr_data[date])
-
-		# Use indicators to determine rising or falling
-		# If not all agree, in a hold position
-		if rsi > 50 and stochk > 50 and stochd > 50 and macd > macd_sig:
-			self.analysis = 'Rise'
-		elif rsi < 50 and stochk < 50 and stochd < 50 and macd < macd_sig:
-			self.analysis = 'Fall'
-		else:
-			self.analysis = 'Hold'
-
-		stop_price = current_price - adr
-		sell_price = current_price + 2 * adr
-		out = {
-			'analysis':self.analysis,
-			'current price':current_price,
-			'stop price':stop_price,
-			'sell price':sell_price
-		}
-
-		return out
-
-	def getPriceData(self):
-		'''
-		Return stock price for each period in history
-		'''
-		return self.price_data['4. close']
-
-	def getRSIData(self):
-		'''
-		Return RSI data for each period in history
-		'''
-		return self.rsi_data
-
-	def getStochasticData(self):
-		'''
-		Return stochastic data for each period in history
-		'''
-
-		return self.stoch_data
-
-	def getMACDData(self):
-		'''
-		Return MACD data for each period in history
-		'''
-		return self.macd_data
-
-	def getADRData(self):
-		'''
-		Return average daily range data for each period in history
-		'''
-		return self.adr_data
-
-	def getCurrentPrice(self):
-		'''
-		Returns current price of stock
-		'''
-		return self.getPriceData().iloc[0]
-
-	#TODO: Display all data
-	def display(self):
-		'''
-		Displays graph of stock and averages with matplotlib
-		'''
-		hist = self.getPriceData()[::-1]
-		if self.analysis['analysis'] == 'Rise':
-			color = 'chartreuse'
-		elif self.analysis['analysis'] == 'Fall':
-			color = 'r'
-		else:
-			color = 'dimgray'
-		hist.plot(color=color, label='{} data'.format(self.stock))
-		plt.axhline(y=self.analysis['stop price'], color='r', label='Stop Price {:.2f}'.format(self.analysis['stop price']))
-		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price{:.2f}'.format(self.analysis['sell price']))
-		plt.xlabel('Date')
-		plt.ylabel('Price')
-		plt.xticks(rotation=80)
-		plt.title('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis['analysis'], self.getCurrentPrice()))
-		plt.legend(loc='upper left')
-		plt.show()
-		plt.clf()
-
-	#TODO: FIX this too
-	def saveAsPng(self, filename=''):
-		'''
-		Saves graph as png to filename
-		If none specified, defaults to {stock}.png
-		'''
-		if filename == '':
-			filename = '{}.png'.format(self.stock)
-		hist = self.getPriceData()[::-1]
-		if self.analysis['analysis'] == 'Rise':
-			color = 'chartreuse'
-		elif self.analysis['analysis'] == 'Fall':
-			color = 'r'
-		else:
-			color = 'dimgray'
-		hist.plot(color=color, label='{} data'.format(self.stock))
-		plt.axhline(y=self.analysis['stop price'], color='r', label='Stop Price {:.2f}'.format(self.analysis['stop price']))
-		plt.axhline(y=self.analysis['sell price'], color='chartreuse', label='Target Price {:.2f}'.format(self.analysis['sell price']))
-		plt.xlabel('Date')
-		plt.ylabel('Price')
-		plt.xticks(rotation=80)
-		plt.title('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis['analysis'], self.getCurrentPrice()))
-		plt.legend(loc='upper left')
-		plt.savefig(filename, pad_inches = 1)
-		plt.clf()
-
-	def runSimulationTI(self, startingBalance, buyAmount, days=100, startingStock=0, verbose=False):
-		balance = startingBalance
-		ba = buyAmount
-		num_stock = startingStock
-		last_analysis = ''
-		current_analysis = ''
-		printHold = False;
-		stop_price = 0
-		sell_price = 0
-		for i in range(1, days+1):
-			curr_date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
-			data = self.tiaanalysis(curr_date, 'read')
-			if (data['analysis'] != 'fail'):
-				last_analysis = analysis
-				current_analysis = data['analysis']
-				current_price = data['current price']
-
-				'''
-				If changes to buy:
-					buy if able
-					log stop/sell price
-				if changes to sell or hits stop/sell price:
-					sell if able
-
-				'''
-
-				if current_analysis == 'Rise' and last_analysis != 'Rise':
-					if ba * current_price <= balance:
-						balance -= ba * current_price
-						num_stock += ba
-						last_transaction = 'Buy'
-						stop_price = data['stop price']
-						sell_price = data['sell price']
-						if verbose:
-							print('Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-					else:
-						if verbose:
-							print('Not Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-				elif (analysis == 'Sell' and last_transaction != 'Sell') or current_price < stop_price or current_price > sell_price:
-					if num_stock >= ba:
-						balance += ba * current_price
-						num_stock -= ba
-						last_transaction = 'Sell'
-						if verbose:
-							print('Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-					else:
-						if verbose:
-							print('Not Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-				else:
-					if verbose:
-						if printHold:
-							print('Hold {} at {:.2f}'.format(self.stock, current_price))
-		return balance, num_stock
-
-#########################################################
-# Below here is legacy code
-#########################################################
 '''
-	def LongShortAvgAnalysis(self, dataset):
-		
-		If short term average is above long term average by
-		pgd, stock is rising. Send buy signal until difference
-		is above pgd + sda. If short term average is below long term
-		average by same criteria, send sell signal While stock
-		is rising/falling and buy/sell signal is over, send
-		hold signal.
-		Params: dataset to analyze
-		Return: string 'Buy', 'Sell', or 'Hold'
-		
-		short_avg = dataset[-1 * self.short_avg:].mean()
-		long_avg = dataset[-1 * self.long_avg:].mean()
-		current_price = self.getCurrentPrice()
-		if short_avg - long_avg > (self.pgd * current_price) and short_avg - long_avg < (self.pgd * current_price) + self.sda:
-			self.analysis = 'Buy'
-			return 'Buy'
-		elif long_avg - short_avg > (self.pgd * current_price) and long_avg - short_avg < (self.pgd * current_price) + self.sda:
-			self.analysis = 'Sell'
-			return 'Sell'
-		self.analysis = 'Hold'
-		return 'Hold'
-
-	def runSimulationLS(self, startingBalance, buyAmount, startingStock=0, verbose=False):
-		
-		Runs simulation on stock history. Analysis is run on stock data to a certain date
-		Starts with given balance and starting stock (default 0) and invests based on
-		analysis.
-		Params: startingbalance - amount to start with in $
-				buyAmount - amount of stock to buy each time
-				startingStock - amount of stock to start with
-		Return: ending balance, number of stock
-		
-		balance = startingBalance
-		ba = buyAmount
-		num_stock = startingStock
-		data = self.getStockData().values
-		last_transaction = ''
-		last_price = 0
-		printHold = False;
-		for i in range(self.short_avg, data.size):
-			data_slice = data[:i]
-			if len(data_slice) > self.short_avg:
-				current_price = data_slice[-1]
-				analysis = self.tiaanalysis(data_slice)
-				if analysis == 'Buy' and last_transaction != 'Buy':
-					if ba * current_price <= balance:
-						balance -= ba * current_price
-						num_stock += ba
-						last_transaction = 'Buy'
-						if verbose:
-							print('Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-					else:
-						if verbose:
-							print('Not Bought {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-				elif analysis == 'Sell' and last_transaction != 'Sell':
-					if num_stock >= ba:
-						balance += ba * current_price
-						num_stock -= ba
-						last_transaction = 'Sell'
-						if verbose:
-							print('Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-					else:
-						if verbose:
-							print('Not Sold {} of {} at {:.2f}'.format(ba, self.stock, current_price))
-				else:
-					if verbose:
-						if printHold:
-							print('Hold {} at {:.2f}'.format(self.stock, current_price))
-		return balance, num_stock'''
