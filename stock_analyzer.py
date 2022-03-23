@@ -167,6 +167,9 @@ class Stockalyzer:
 			self.analysis = 'Fall'
 		else:
 			self.analysis = 'Hold'
+	
+	def getCurrentPrice():
+		return self.ti['price']
 
 	#TODO: Display all data
 	def display(self):
