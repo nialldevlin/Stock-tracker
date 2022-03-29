@@ -160,7 +160,7 @@ class Stockalyzer:
 		self.ti['sell price'] = price + 2 * adr
 		self.ti['stop price'] = price - adr
 
-		print(self.ti)
+		print(self.stock, self.ti)
 		if rsi > 50 and stochk > 50 and stochk_d > 0 and macd > sig:
 			self.analysis = 'Rise'
 		elif rsi < 50 and stochd < 50 and macd < sig:
@@ -168,7 +168,7 @@ class Stockalyzer:
 		else:
 			self.analysis = 'Hold'
 	
-	def getCurrentPrice():
+	def getCurrentPrice(self):
 		return self.ti['price']
 
 	#TODO: Display all data
@@ -218,7 +218,7 @@ class Stockalyzer:
 		f = filename
 		if f == '':
 			f = '{}.png'.format(self.stock)
-		hist = self.getPriceData()[::-1]
+		
 		if self.analysis == 'Rise':
 			color = 'chartreuse'
 		elif self.analysis == 'Fall':
@@ -243,7 +243,7 @@ class Stockalyzer:
 		ax[2].legend(loc='upper left')
 		ax[2].plot(self.td[['macd', 'signal']])
 		plt.subplots_adjust(left=0.1,
-                    bottom=0.9,
+                    bottom=0.7,
                     right=0.9,
                     top=0.9,
                     wspace=0.4,

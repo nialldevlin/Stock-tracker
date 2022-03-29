@@ -56,9 +56,6 @@ for stock in stock_list:
 	if args.verbose == 2:
 		stockbot.display()
 
-	if not args.testing:
-		time.sleep(60)
-
 sent_from = gmail_user
 subject = 'Stock Status Update'
 body = "Stockalyzer analysis at {} \n\n".format(datetime.now().strftime("%A, %B %d %H:%M"))
