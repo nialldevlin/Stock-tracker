@@ -64,7 +64,7 @@ for stock in stock_status:
 	analysis = stock_status[stock]['analysis']
 	price = stock_status[stock]['price']
 	adr = stock_status[stock]['adr']
-	stock_line = "{} {} at {:.2f}, Average Daily Range: {}\n".format(analysis, stock, price, adr)
+	stock_line = "{} {} at {:.2f}, Average Daily Range: {:.2f}\n".format(analysis, stock, price, adr)
 	body += stock_line
 
 for to in to_list:

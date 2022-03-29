@@ -81,6 +81,8 @@ class Stockalyzer:
 			Wilder[i] = (Wilder[i-1]*(periods-1) + data[i])/periods #Wilder Smoothing
 		return(Wilder)
 	
+	#TODO separate into functions for indicators
+	#TODO get short data
 	def getLongData(self):
 		ticker = yf.Ticker(self.stock)
 		info = ticker.info
