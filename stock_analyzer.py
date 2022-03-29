@@ -171,8 +171,7 @@ class Stockalyzer:
 	def getCurrentPrice(self):
 		return self.ti['price']
 
-	#TODO: Display all data
-	def display(self):
+	def display(self, filename=''):
 		'''
 		Displays graph of stock and averages with matplotlib
 		'''
@@ -183,7 +182,7 @@ class Stockalyzer:
 			color = 'r'
 		else:
 			color = 'dimgray'
-		fig, ax = plt.subplots(nrows=3)
+		fig, ax = plt.subplots(nrows=3, figsize=(6, 6))
 		ax[0].axhline(y=self.ti['stop price'], color='r', label='Stop Price {:.2f}'.format(self.ti['stop price']))
 		ax[0].axhline(y=self.ti['sell price'], color='chartreuse', label='Target Price{:.2f}'.format(self.ti['sell price']))
 		ax[0].title.set_text('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis, self.ti['price']))
@@ -192,61 +191,20 @@ class Stockalyzer:
 		ax[0].set_ylabel('Price')
 		ax[0].plot(self.td['price'], color=color, label='{} Price'.format(self.stock))
 		ax[1].axhline(y=50)
-		ax[1].legend(loc='upper left')
 		ax[1].set_xlabel('Date')
 		ax[1].set_ylabel('Value')
-		ax[1].title.set_text('{} Technical Indicators - RSI: {}, Stochastic: {}'.format(self.stock, self.ti['rsi'], self.ti['stochk']))
-		ax[1].plot(self.td[['rsi', 'stochk']])
+		ax[1].title.set_text('{} Technical Indicators - RSI, Stochastic'.format(self.stock, self.ti['rsi'], self.ti['stochk']))
+		ax[1].plot(self.td['rsi'], label='RSI {:.2f}'.format(self.ti['rsi']))
+		ax[1].plot(self.td['stochk'], label='Stochastic Long {:.2f}'.format(self.ti['stochk']))
+		ax[1].plot(self.td['stochd'], label='Stochastic Short {:.2f}'.format(self.ti['stochd']))
+		ax[1].legend(loc='upper left')
 		ax[2].title.set_text('{} MACD and Signal line'.format(self.stock, self.ti['macd'], self.ti['sig']))
+		ax[2].plot(self.td['macd'], label='MACD {:.2f}'.format(self.ti['macd']))
+		ax[2].plot(self.td['signal'], label='Signal {:.2f}'.format(self.ti['sig']))
 		ax[2].legend(loc='upper left')
-		ax[2].plot(self.td[['macd', 'signal']])
-		plt.subplots_adjust(left=0.1,
-                    bottom=0.1,
-                    right=0.9,
-                    top=0.9,
-                    wspace=0.4,
-                    hspace=0.4)
-		plt.show()
-		plt.clf()
-
-	#TODO: FIX this too
-	def saveAsPng(self, filename=''):
-		'''
-		Saves graph as png to filename
-		If none specified, defaults to {stock}.png
-		'''
-		f = filename
-		if f == '':
-			f = '{}.png'.format(self.stock)
-		
-		if self.analysis == 'Rise':
-			color = 'chartreuse'
-		elif self.analysis == 'Fall':
-			color = 'r'
+		fig.tight_layout()
+		if filename:
+			plt.savefig(filename)
 		else:
-			color = 'dimgray'
-		fig, ax = plt.subplots(nrows=3)
-		ax[0].axhline(y=self.ti['stop price'], color='r', label='Stop Price {:.2f}'.format(self.ti['stop price']))
-		ax[0].axhline(y=self.ti['sell price'], color='chartreuse', label='Target Price{:.2f}'.format(self.ti['sell price']))
-		ax[0].title.set_text('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis, self.ti['price']))
-		ax[0].legend(loc='upper left')
-		ax[0].set_xlabel('Date')
-		ax[0].set_ylabel('Price')
-		ax[0].plot(self.td['price'], color=color, label='{} Price'.format(self.stock))
-		ax[1].axhline(y=50)
-		ax[1].legend(loc='upper left')
-		ax[1].set_xlabel('Date')
-		ax[1].set_ylabel('Value')
-		ax[1].title.set_text('{} Technical Indicators - RSI: {}, Stochastic: {}'.format(self.stock, self.ti['rsi'], self.ti['stochk']))
-		ax[1].plot(self.td[['rsi', 'stochk']])
-		ax[2].title.set_text('{} MACD and Signal line'.format(self.stock, self.ti['macd'], self.ti['sig']))
-		ax[2].legend(loc='upper left')
-		ax[2].plot(self.td[['macd', 'signal']])
-		plt.subplots_adjust(left=0.1,
-                    bottom=0.7,
-                    right=0.9,
-                    top=0.9,
-                    wspace=0.4,
-                    hspace=0.4)
-		plt.savefig(f)
+			plt.show()
 		plt.clf()

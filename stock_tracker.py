@@ -47,8 +47,8 @@ for stock in stock_list:
 	stockbot = Stockalyzer(stock, interval='60min', mode='live')
 	analysis = stockbot.getAnalysis()
 	price = stockbot.getCurrentPrice()
-	stockbot.saveAsPng("{}.png".format(stock))
-	stock_status[stock] = {'analysis':analysis, 'price':price}
+	stockbot.display("{}.png".format(stock))
+	stock_status[stock] = {'analysis':analysis, 'price':price, 'adr':stockbot.ti['adr']}
 
 	if args.verbose == 1:
 		print("{} {} at {}".format(analysis, stock, price))
@@ -63,7 +63,8 @@ body = "Stockalyzer analysis at {} \n\n".format(datetime.now().strftime("%A, %B 
 for stock in stock_status:
 	analysis = stock_status[stock]['analysis']
 	price = stock_status[stock]['price']
-	stock_line = "{} {} at {:.2f}\n".format(analysis, stock, price)
+	adr = stock_status[stock]['adr']
+	stock_line = "{} {} at {:.2f}, Average Daily Range: {}\n".format(analysis, stock, price, adr)
 	body += stock_line
 
 for to in to_list:
@@ -74,7 +75,7 @@ for to in to_list:
 
 	txt = MIMEText(body)
 	msg.attach(txt);
-
+	
 	for stock in stock_list:
 		# set attachment mime and file name, the image type is png
 		stock_img_file = "{}.png".format(stock)
