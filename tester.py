@@ -17,7 +17,7 @@ analysis = handler.get_analysis()
 oscillators = analysis.oscillators
 indicators = analysis.indicators
 summary = analysis.summary
-
+print(indicators)
 rsi = indicators['RSI']
 stochk = indicators['Stoch.K']
 stochd = indicators['Stoch.D']
