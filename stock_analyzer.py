@@ -8,7 +8,7 @@ import requests
 import json
 
 class Stockalyzer:
-	def __init__(self, ticker, interval='daily', mode='store'):
+	def __init__(self, symbol, interval='daily', mode='store'):
 		'''
 		Class to analyze stocks. Also contains simulator to check algorithm
 		Params: ticker - 4 letter stock name eg. 'MSFT'
@@ -17,162 +17,141 @@ class Stockalyzer:
 		if interval not in ('daily', '60min'):
 			raise ValueError('interval must be daily or 60min')
 
-		self.stock = ticker
+		# TODO: Auto adjust periods based on interval
+		if interval == 'daily':
+			tpm = 1
+		elif interval == '60min':
+			tpm = 16
+
+		self.params = {
+			'RSI': {
+				'interval': interval,
+				'time_period': 7 * tpm,
+				'series_type': 'close'
+			},
+			'STOCH': {
+				'interval': interval,
+				'fastkperiod': 14 * tpm,
+				'slowkperiod': 3 * tpm,
+				'slowdperiod': 3 * tpm
+			},
+			'MACDEXT': {
+				'interval': interval,
+				'series_type': 'close',
+				'fastperiod': 12 * tpm,
+				'slowperiod': 26 * tpm,
+				'signalperiod': 9 * tpm,
+				'fastmatype': 1,
+				'slowmatype': 1,
+				'signalmatype': 1
+			},
+			'ATR': {
+				'interval': interval,
+				'time_period': 7 * tpm
+			}
+		}
+
+		self.stock = symbol
+		self.ticker = yf.Ticker(self.stock)
 		self.interval = interval
 		self.analysis = ''
 		self.ti = {}
 		self.td = {}
 
-		with open('apikey.txt', 'rb') as f:
-			self.apikey = f.read()
+		self.price_data = self.getPriceData()
+		self.rsi_data = self.getRSIData()
+		self.stochk_data, self.stochd_data = self.getStochData()
+		self.macd_data, self.macd_sig_data = self.getMACDData()
 
-		#TODO: Auto adjust periods based on interval
-		if interval == 'daily':
-			tpm = 1
-		elif interval == '60min':
-			tpm = 16
-		self.params = {
-			'RSI': {
-				'interval':interval,
-				'time_period':7 * tpm,
-				'series_type':'close'
-			},
-			'STOCH': {
-				'interval':interval,
-				'fastkperiod':14 * tpm,
-				'slowkperiod':3 * tpm,
-				'slowdperiod':3 * tpm
-			},
-			'MACDEXT': {
-				'interval':interval,
-				'series_type':'close',
-				'fastperiod':12 * tpm,
-				'slowperiod':26 * tpm,
-				'signalperiod':9 * tpm,
-				'fastmatype':1,
-				'slowmatype':1,
-				'signalmatype':1
-			},
-			'ATR': {
-				'interval':interval,
-				'time_period':7 * tpm
-			}
+		self.price = self.getPrice()
+		self.rsi = self.getRSI()
+		self.stochk, self.stochd = self.getStoch()
+		self.macd, self.macd_sig = self.getMACD()
+		self.adr = self.getADR()
+		self.stop = self.price - self.adr
+		self.sell = self.price + self.adr * 2
 
-		}
-		self.info = pd.DataFrame()
-		self.history = pd.DataFrame()
-		self.getLongData()
+	def getPriceData(self):
+		return pd.DataFrame(self.ticker.history(period='1y', interval='1d'))
 
+	def getRSIData(self):
+		# Relative Strength Indicator
+		rsi_period = 7
+		change = self.price_data['Close'].diff()
+		up = change.clip(lower=0)
+		down = -1 * change.clip(upper=0)
+		avgu = up.ewm(span=rsi_period, adjust=False).mean()
+		avgd = down.ewm(span=rsi_period, adjust=False).mean()
+		rs = avgu / avgd
+		rsi = 100 - (100 / (1 + rs))
+		return rsi
 
-	# TODO: Make this better it sucks
-	def getAnalysis(self):
-		'''
-		Returns an analysis of given stock in terms of a buy,
-		sell, or hold position. Estimated 9% gain
-		Return: string 'Buy', 'Sell', or 'Hold'
-		'''
-		return self.analysis
-	
-	def Wilder(self, data, periods):
-		start = np.where(~np.isnan(data))[0][0] #Check if nans present in beginning
-		Wilder = np.array([np.nan]*len(data))
-		Wilder[start+periods-1] = data[start:(start+periods)].mean() #Simple Moving Average
-		for i in range(start+periods,len(data)):
-			Wilder[i] = (Wilder[i-1]*(periods-1) + data[i])/periods #Wilder Smoothing
-		return(Wilder)
-	
-	#TODO separate into functions for indicators
-	#TODO get short data
-	def getLongData(self):
-		ticker = yf.Ticker(self.stock)
-		info = ticker.info
-		important_data = [
-			'fiftyDayAverage',
-			'twoHundredDayAverage',
-			'currentPrice',
-			'trailingPE'
-		]
-		important_info = {}
-		for i in info:
-			if i in important_data:
-				important_info[i] = info[i]
-		self.history = pd.DataFrame(ticker.history(period='1y', interval='1d'))
-		if 'currentPrice' not in important_info:
-			important_info['currentPrice'] = self.history['Close'].tail(1)[0]
+	def getStochData(self):
+		# Stochastic oscillator
+		low_d = self.price_data['Low'].transform(lambda x: x.rolling(window=3).min())
+		high_d = self.price_data['High'].transform(lambda x: x.rolling(window=3).max())
+		low_k = self.price_data['Low'].transform(lambda x: x.rolling(window=14).min())
+		high_k = self.price_data['High'].transform(lambda x: x.rolling(window=14).max())
 
-		self.td['price'] = self.history['Close']
+		stochd = ((self.price_data['Close'] - low_d) / (high_d - low_d)) * 100
+		stochk = ((self.price_data['Close'] - low_k) / (high_k - low_k)) * 100
+		stochd = stochd.rolling(window = 3).mean()
+		stochk = stochk.rolling(window = 14).mean()
+		return stochk, stochd
 
-		#Average Daily Range
-		last_week = self.history.tail(7)
+	def getMACDData(self):
+		# Moving Average Convergence Divergence
+		sema = self.price_data['Close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
+		lema = self.price_data['Close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+		macd = sema - lema
+		sig = macd.transform(lambda x: x.ewm(span=9, adjust=False).mean())
+		return macd, sig
+
+	def getADR(self):
+		# Average Daily Range
+		l = 7
+		last_week = self.price_data.tail(l)
 		daily_ranges = np.array([])
-		for i in range(7):
+		for i in range(l):
 			dr = last_week.iloc[i]['High'] - last_week.iloc[i]['Low']
 			hc = np.abs(last_week.iloc[i]['High'] - last_week.iloc[i]['Close'])
 			lc = np.abs(last_week.iloc[i]['High'] - last_week.iloc[i]['Low'])
 			m = np.array([dr, hc, lc]).max()
 			daily_ranges = np.append(daily_ranges, m)
 		adr = np.mean(daily_ranges)
-		self.ti['adr'] = adr
+		return adr
 
-		#Stochastic oscillator
-		low_d = self.history['Low'].transform(lambda x: x.rolling(window = 3).min())
-		high_d = self.history['High'].transform(lambda x: x.rolling(window = 3).max())
-		low_k = self.history['Low'].transform(lambda x: x.rolling(window = 14).min())
-		high_k = self.history['High'].transform(lambda x: x.rolling(window = 14).max())
+	def getPrice(self):
+		return self.price_data['Close'].iloc[-1]
 
-		stochd = ((self.history['Close'] - low_d)/(high_d - low_d))*100
-		stochk = ((self.history['Close'] - low_k)/(high_k - low_k))*100
+	def getRSI(self):
+		return self.rsi_data[-1]
 
-		self.td['stochd'] = stochd.rolling(window = 3).mean()
-		self.td['stochk'] = stochk.rolling(window = 14).mean()
+	def getStoch(self):
+		return self.stochk_data[-1], self.stochd_data[-1]
 
-		#self.td['stoch ratio'] = self.td['stochd s']/self.td['stochd l']
+	def getMACD(self):
+		return self.macd_data[-1], self.macd_sig_data[-1]
 
-		#Relative Strength Indicator
-		rsi_period = 7
-		change = self.history['Close'].diff()
-		up = change.clip(lower=0)
-		down = -1 * change.clip(upper=0)
-		avgu = up.ewm(span=rsi_period, adjust=False).mean()
-		avgd = down.ewm(span=rsi_period, adjust=False).mean()
-		rs = avgu / avgd 
-		self.td['rsi'] = 100 - (100/(1 + rs))
-		
-		#Moving Average Convergence Divergence
-		sema = self.history['Close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
-		lema = self.history['Close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
-		self.td['macd'] = sema - lema
-		self.td['signal'] = self.td['macd'].transform(lambda x: x.ewm(span=9, adjust=False).mean())
-		self.td = pd.DataFrame(self.td)
+	def getStopPrice(self):
+		return self.stop
 
-		rsi = self.td['rsi'].tail(1)[0]
-		self.ti['rsi'] = rsi
-		adr = self.ti['adr']
-		price = important_info['currentPrice']
-		self.ti['price'] = price
-		stochd = self.td['stochd'].tail(1)[0]
-		self.ti['stochd'] = stochd
-		stochk = self.td['stochk'].tail(1)[0]
-		stochk_d = self.td['stochk'].tail(2)[1] - self.td['stochk'].tail(2)[0]
-		self.ti['stochk'] = stochk
-		macd = self.td['macd'].tail(1)[0]
-		self.ti['macd'] = macd
-		sig = self.td['signal'].tail(1)[0]
-		self.ti['sig'] = sig
-		self.ti['sell price'] = price + 2 * adr
-		self.ti['stop price'] = price - adr
+	def getSellPrice(self):
+		return self.sell
 
-		print(self.stock, self.ti)
-		if rsi > 50 and stochk > 50 and stochk_d > 0 and macd > sig:
-			self.analysis = 'Rise'
-		elif rsi < 50 and stochd < 50 and macd < sig:
-			self.analysis = 'Fall'
+	def getAnalysis(self):
+		'''
+		Returns an analysis of given stock in terms of a buy,
+		sell, or hold position. Estimated 9% gain
+		Return: string 'Buy', 'Sell', or 'Hold'
+		'''
+		if self.rsi > 50 and self.stochk > 50 and self.macd > self.macd_sig:
+			return 'Buy'
+		elif self.rsi < 50 and self.stochk < 50 and self.macd < self.macd_sig:
+			return 'Sell'
 		else:
-			self.analysis = 'Hold'
-	
-	def getCurrentPrice(self):
-		return self.ti['price']
-
+			return 'Hold'
+"""
 	def display(self, filename=''):
 		'''
 		Displays graph of stock and averages with matplotlib
@@ -209,4 +188,4 @@ class Stockalyzer:
 			plt.savefig(filename)
 		else:
 			plt.show()
-		plt.clf()
+		plt.clf()"""
