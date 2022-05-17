@@ -70,6 +70,10 @@ class Stockalyzer:
 		self.adr = self.getADR()
 		self.stop = self.price - self.adr
 		self.sell = self.price + self.adr * 2
+		self.avg_50 = self.ticker.info['fiftyDayAverage']
+		self.avg_200 = self.ticker.info['twoHundredDayAverage']
+
+		self.last_rsi = self.rsi_data
 
 	def getPriceData(self):
 		return pd.DataFrame(self.ticker.history(period='1y', interval='1d'))
@@ -145,7 +149,11 @@ class Stockalyzer:
 		sell, or hold position. Estimated 9% gain
 		Return: string 'Buy', 'Sell', or 'Hold'
 		'''
-		if self.rsi > 50 and self.stochk > 50 and self.macd > self.macd_sig:
+		if (self.rsi > 50 and
+			self.stochk > 50 and
+			self.macd > self.macd_sig and
+			self.avg_50 > self.avg_200 and
+			self.price > self.avg_50):
 			return 'Buy'
 		elif self.rsi < 50 and self.stochk < 50 and self.macd < self.macd_sig:
 			return 'Sell'
