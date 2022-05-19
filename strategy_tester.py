@@ -1,24 +1,22 @@
 from stock_analyzer import  Stockalyzer
-from datetime import datetime
 
-class powerXTester:
-    def __init__(self, ticker):
-        self.sa = Stockalyzer(ticker)
-
-    def runSimulation(self, starting_cash, buy_amount):
-        balance = starting_cash
-        stocks = 0
-        #b_or_s = True # False last bought, True last sold
-        for i in self.sa.price_data.index:
-            if self.sa.rsi_data.loc[i] > 50 and self.sa.stochk_data.loc[i] > 50 and self.sa.macd_data.loc[i] > self.sa.macd_sig_data.loc[i]:
-                if balance > buy_amount * self.sa.price_data['Open'].loc[i]:
-                    balance -= buy_amount * self.sa.price_data['Open'].loc[i]
-                    stocks += buy_amount
-            else:
-                if stocks > 0:
-                    balance += buy_amount * self.sa.price_data['Open'].loc[i]
-                    stocks -= buy_amount
-        if stocks > 0:
-            balance += stocks * self.sa.price
-        return balance
+def runSimulation(ticker, starting_cash, verbose=False):
+    sa = Stockalyzer(ticker)
+    balance = starting_cash
+    stocks = 0
+    #b_or_s = True # False last bought, True last sold
+    for i in sa.price_data.index:
+        price = sa.price_data['open'].loc[i]
+        if sa.getAnalysis(i) == 'Buy':
+            buy_amount = int(balance / price)
+            balance -= buy_amount * price
+            stocks += buy_amount
+            if buy_amount > 0 and verbose:
+                print('Bought {} of {} at {}'.format(buy_amount, ticker, price))
+        else:
+            balance += stocks * price
+            if stocks > 0 and verbose:
+                print('Sold {} of {} at {}'.format(stocks, ticker, price))
+            stocks = 0
+    return balance + stocks * sa.price
 

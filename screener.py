@@ -5,9 +5,13 @@ import requests
 from stock_analyzer import Stockalyzer
 
 class Screener:
-    def __init__(self, url):
-        html = requests.get(url=url, ).text
+    def __init__(self, api, url='https://en.wikipedia.org/wiki/List_of_S&P_500_companies'):
+        self.api = api
+        html = requests.get(url=url).text
         self.soup = BeautifulSoup(html, 'html.parser')
+        self.list = self.getList()
+        self.data = self.getData()
+        self.buy = self.getBuy()
 
     def stripTags(self, full_str):
         col_n = full_str
@@ -39,13 +43,14 @@ class Screener:
         df = pd.concat(s_list, axis=1).T
         return df.iloc[:,:2]
 
-    def getData(self, list):
+    def getData(self):
+        list = self.list
         indx = list.columns.values.tolist()
         indx.extend(['Analysis', 'Price', 'Stop', 'Sell'])
         s_list = []
         for index, row in list.iterrows():
             try:
-                sto = Stockalyzer(row['Symbol'])
+                sto = Stockalyzer(row['Symbol'], self.api)
                 s = pd.Series([row['Symbol'],
                                   row['Security'],
                                   sto.getAnalysis(),
@@ -58,6 +63,7 @@ class Screener:
         df = pd.concat(s_list, axis=1).T
         return df
 
-    def getBuy(self, data):
+    def getBuy(self):
+        data = self.data
         df = data.loc[data['Analysis'] == 'Buy']
         return df
