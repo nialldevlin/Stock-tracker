@@ -1,4 +1,17 @@
 # Stock tracker
+## Technical analysis based stock screener and trader
+<p>
+Uses a combination of technical indicators to determine which stocks in the S&P 500 are profitable, finds the best stock, and places a trade with the Alpaca trade api (https://alpaca.markets/). It also monitors current positions and determines when to sell. Meant to be run hourly or daily from a server.
+</p>
+
+### Dependencies
+- Python 3
+- virtualenv
+- pandas
+- numpy
+- alpaca-trade-api
+- yahoo-fin
+
 ## Instructions for install on linux, or windows subsytem for linux
 <p>
 Names of folders and virtual environments are just examples,<br>
@@ -12,7 +25,7 @@ use whatever you want.<br>
 
 ```git clone git@github.com:nialldevlin/Stock-tracker.git```
 
-- Install virtualenv if not installed
+- Install virtualenv
 
 ```pip install virtualenv```
 
@@ -24,7 +37,7 @@ use whatever you want.<br>
 
 ```
 source stracker/bin/activate
-pip install numpy pandas yfinance telegram_send matplotlib cryptography
+pip install numpy pandas yahoo-fin alpaca-trade-api
 deactivate
 ```
 
