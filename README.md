@@ -23,7 +23,7 @@ use whatever you want.<br>
 
 - Clone git repo
 
-```git clone git@github.com:nialldevlin/Stock-tracker.git```
+```git clone https://github.com/nialldevlin/Stock-tracker.git```
 
 - Install virtualenv
 
