@@ -1,65 +1,37 @@
-from bs4 import BeautifulSoup
-import numpy as np
+import yahoo_fin.stock_info as yf
 import pandas as pd
-import requests
 from stock_analyzer import Stockalyzer
 
 class Screener:
-    def __init__(self, api, url='https://en.wikipedia.org/wiki/List_of_S&P_500_companies'):
+    def __init__(self, api):
         self.api = api
-        html = requests.get(url=url).text
-        self.soup = BeautifulSoup(html, 'html.parser')
-        self.list = self.getList()
+        print('Getting stock list')
+        self.list = yf.tickers_sp500()
         self.data = self.getData()
         self.buy = self.getBuy()
 
-    def stripTags(self, full_str):
-        col_n = full_str
-        while col_n.find('<') != -1:
-            start = col_n.find('<')
-            end = col_n.find('>')
-            col_n = col_n[:start] + col_n[end + 1:]
-        newl = col_n.find('\n')
-        if newl != -1:
-            col_n = col_n[:newl] + col_n[newl+2:]
-        return col_n
-
-    def getList(self):
-        indx = []
-        for col in self.soup.table.tr.contents:
-            col_name = str(col)
-            col_name = self.stripTags(col_name)
-            if col_name:
-                indx.append(col_name)
-        s_list = []
-        for row in self.soup.table.find_all('tr')[1:]:
-            s = []
-            for i in row.find_all('td'):
-                n = self.stripTags(str(i))
-                s.append(n)
-            if len(s) == 9:
-                s = pd.Series(s, index=indx)
-                s_list.append(s)
-        df = pd.concat(s_list, axis=1).T
-        return df.iloc[:,:2]
-
     def getData(self):
+        print('Evaluating stock list')
         list = self.list
-        indx = list.columns.values.tolist()
-        indx.extend(['Analysis', 'Price', 'Stop', 'Sell'])
+        indx = ['Symbol', 'Analysis', 'Price', 'Stop', 'Sell', 'Score']
         s_list = []
-        for index, row in list.iterrows():
+        i = 0
+        l = len(list)
+        for ticker in list:
+            # TODO: add score
             try:
-                sto = Stockalyzer(row['Symbol'], self.api)
-                s = pd.Series([row['Symbol'],
-                                  row['Security'],
-                                  sto.getAnalysis(),
-                                  sto.getPrice(),
-                                  sto.getStopPrice(),
-                                  sto.getSellPrice()], index=indx)
+                sto = Stockalyzer(ticker, self.api)
+                s = pd.Series([ticker,
+                               sto.get_analysis(),
+                               sto.getPrice(),
+                               sto.getStopPrice(),
+                               sto.getSellPrice(),
+                               sto.get_score()], index=indx)
+                i += 1
+                print('{}/{}: {} at {}, {}'.format(i, l, s['Symbol'], s['Price'], s['Analysis']))
                 s_list.append(s)
             except Exception as ex:
-                print(row['Symbol'], 'Error Getting Data:', ex)
+                print(ticker, ex)
         df = pd.concat(s_list, axis=1).T
         return df
 
