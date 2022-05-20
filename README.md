@@ -13,14 +13,6 @@ Uses a combination of technical indicators to determine which stocks in the S&P 
 - yahoo-fin
 
 ## Instructions for install on linux, or windows subsytem for linux
-<p>
-Names of folders and virtual environments are just examples,<br>
-use whatever you want.<br>
-
-- Create new project directory
-
-```mkdir ~/stocktracker && cd ~/stocktracker```
-
 - Clone git repo
 
 ```
