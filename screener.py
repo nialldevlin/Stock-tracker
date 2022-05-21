@@ -3,8 +3,7 @@ import pandas as pd
 from stock_analyzer import Stockalyzer
 
 class Screener:
-    def __init__(self, api):
-        self.api = api
+    def __init__(self):
         print('Getting stock list')
         self.list = yf.tickers_sp500()
         self.data = self.getData()
@@ -18,9 +17,8 @@ class Screener:
         i = 0
         l = len(list)
         for ticker in list:
-            # TODO: add score
             try:
-                sto = Stockalyzer(ticker, self.api)
+                sto = Stockalyzer(ticker)
                 s = pd.Series([ticker,
                                sto.get_analysis(),
                                sto.getPrice(),

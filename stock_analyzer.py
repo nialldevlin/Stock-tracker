@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import yahoo_fin.stock_info as yf
 
 class Stockalyzer:
-	def __init__(self, symbol, api, interval=tradeapi.TimeFrame.Hour, mode='store'):
+	def __init__(self, symbol, interval=tradeapi.TimeFrame.Hour, mode='store'):
 		'''
 		Class to analyze stocks. Also contains simulator to check algorithm
 		Params: ticker - 4 letter stock name eg. 'MSFT'
@@ -45,7 +45,7 @@ class Stockalyzer:
 		}
 
 		self.stock = symbol
-		self.api = api
+		self.api = tradeapi.REST('AKO60D937GTSFKPNEWEI', 'rstzhpuuGzhBpJ3ojwT4oswGybvBJcOcfGEpGKwr', 'https://api.alpaca.markets')
 		self.account = self.api.get_account()
 		self.interval = interval
 		self.analysis = ''
@@ -82,7 +82,7 @@ class Stockalyzer:
 	def getRSIData(self):
 		# Relative Strength Indicator
 		rsi_period = 7
-		change = self.price_data['close'].diff()
+		change = self.price_data['close'].tail(rsi_period * 3).diff()
 		up = change.clip(lower=0)
 		down = -1 * change.clip(upper=0)
 		avgu = up.ewm(span=rsi_period, adjust=False).mean()
@@ -93,21 +93,23 @@ class Stockalyzer:
 
 	def getStochData(self):
 		# Stochastic oscillator
-		low_d = self.price_data['low'].transform(lambda x: x.rolling(window=3).min())
-		high_d = self.price_data['high'].transform(lambda x: x.rolling(window=3).max())
-		low_k = self.price_data['low'].transform(lambda x: x.rolling(window=14).min())
-		high_k = self.price_data['high'].transform(lambda x: x.rolling(window=14).max())
+		data = self.price_data.tail(30)
+		low_d = data['low'].transform(lambda x: x.rolling(window=3).min())
+		high_d = data['high'].transform(lambda x: x.rolling(window=3).max())
+		low_k = data['low'].transform(lambda x: x.rolling(window=14).min())
+		high_k = data['high'].transform(lambda x: x.rolling(window=14).max())
 
-		stochd = ((self.price_data['close'] - low_d) / (high_d - low_d)) * 100
-		stochk = ((self.price_data['close'] - low_k) / (high_k - low_k)) * 100
+		stochd = ((data['close'] - low_d) / (high_d - low_d)) * 100
+		stochk = ((data['close'] - low_k) / (high_k - low_k)) * 100
 		stochd = stochd.rolling(window = 3).mean()
 		stochk = stochk.rolling(window = 14).mean()
 		return stochk, stochd
 
 	def getMACDData(self):
 		# Moving Average Convergence Divergence
-		sema = self.price_data['close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
-		lema = self.price_data['close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+		data = self.price_data.tail(30)
+		sema = data['close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
+		lema = data['close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
 		macd = sema - lema
 		sig = macd.transform(lambda x: x.ewm(span=9, adjust=False).mean())
 		return macd, sig
