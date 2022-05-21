@@ -3,6 +3,7 @@ from stock_analyzer import  Stockalyzer
 import alpaca_trade_api as tradeapi
 from screener import Screener
 import sqlite3
+import re
 
 class Trader:
 	def __init__(self):
@@ -21,14 +22,12 @@ class Trader:
 		return orders
 	
 	def buyPositions(self):
-		db = r"/home/proffessordevnito/Documents/Python_Projects/Stock-tracker/stockdb.sqlite"
+		db = r"/home/proffessordevnito/Documents/Python_Projects/Stock-tracker/app/db/stockdb.sqlite"
 		conn = sqlite3.connect(db)
 		c = conn.cursor()
-		sql_query = pd.read_sql_query("SELECT * FROM products", conn)
-		cols = [description[0] for description in c.description]
-		df = pd.DataFrame(sql_query, columns=cols)
+		df = pd.read_sql('SELECT * FROM stockdb', conn)
 		buy_list = df.loc[df['Analysis'] == 'Buy']
-		buying_power = int(self.account.buying_power)
+		buying_power = int(re.sub("[^0-9]", "", self.account.buying_power))
 		best_stock = buy_list.iloc[pd.to_numeric(buy_list['Score']).idxmax()]
 		
 		buy_amount = int(buying_power / best_stock['Price'])
