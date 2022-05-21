@@ -6,10 +6,9 @@ import sqlite3
 import os
 
 if __name__ == '__main__':
-	#screener = Screener()
-	#data = screener.data
-	data = pd.DataFrame({'Test': [1, 2, 3], 'Test 1': [4, 5, 6], 'Test 2': [7, 8, 9]})
-	
+	screener = Screener()
+	data = screener.data
+
 	conn = sqlite3.connect("stockdb.sqlite")
 	c = conn.cursor()
 
@@ -20,7 +19,7 @@ if __name__ == '__main__':
 	for col in data.columns:
 		sql += col
 		sql += ", "
-	sql = sql[:-1]
+	sql = sql[:-2]
 	sql += ')'
 	c.execute(sql)
 	
