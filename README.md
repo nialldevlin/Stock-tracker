@@ -11,7 +11,7 @@ Uses a combination of technical indicators to determine which stocks in the S&P 
 - numpy
 - alpaca-trade-api
 - yahoo-fin
-- SQLAlchemy
+- SQLite3
 
 ## Instructions for install on linux, or windows subsytem for linux
 - Clone git repo
