@@ -1,0 +1,31 @@
+<!doctype html>
+
+<html>
+
+<head>
+	<title>S&P 500 Stock Tracker</title>
+	<meta name="description" content="S&P Stock Tracker">
+	<meta name="keywords" content="stock S&P finance analysis">
+	<script src="stock_data.js"></script>
+</head>
+
+<body>
+	<h1>S&P 500 Stocks and Analysis</h1>
+	<p>Refreshes daily</p>
+	<h2>Filters</h2>
+	<div id="filters">
+		<label for="stock-analysis">Filter by analysis:</label>
+		<select name="stock-analysis" id="stock-analysis">
+			<option value="Buy">Buy</option>
+			<option value="Hold">Hold</option>
+			<option value="Sell">Sell</option>
+		</select>
+		<form>
+			Symbol: <input type="text" name="Symbol" id="Symbol" maxlength="4" size="5"> <br>
+			Min Price: <input type="number" name="min-price" id="min-price" min="0" max="10000" step="1" value="0"> <br>
+			Max Price: <input type="number" name="max-price" id="max-price" min="0" max="10000" step="1" value="10000"> <br>
+		</form>
+	</div>
+</body>
+
+</html>

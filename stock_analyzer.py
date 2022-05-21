@@ -265,7 +265,8 @@ class Stockalyzer:
 		if (rsi > 50 and
 			stoch > 50 and
 			macd and
-			up):
+			up and
+			self.get_score() >= 7):
 			return 'Buy'
 		elif (rsi < 50 and
 			  stoch < 50 and
