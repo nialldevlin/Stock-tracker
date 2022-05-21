@@ -2,26 +2,24 @@
 <body>
 
 <?php
-require 'vendor/autoload.php';
+include('app/SQLiteConnection.php');
 
-use App\SQLiteConnection;
-
-$SQLC = new SQLiteConnection()
+$SQLC = new SQLiteConnection();
 $pdo = $SQLC->connect();
 if ($pdo != null)
     echo 'Connected to the SQLite database successfully!';
 else
     echo 'Whoops, could not connect to the SQLite database!';
 
-$symbol = $_GET["Symbol"]
-$min-price = $_GET["min-price"]
-$max-price = $_GET["max-price"]
-$analysis = $_GET["analysis"]
-$stock-data = $SQLC->getStochData($symbol, $min-price, $max-price, $analysis);
+$symbol = $_GET["Symbol"];
+$min_price = $_GET["min-price"];
+$max_price = $_GET["max-price"];
+$analysis = $_GET["analysis"];
+$stock_data = $SQLC->getStockData($symbol, $min_price, $max_price, $analysis);
 
 $firstRow = true;
 echo '<div class="table-responsive"><table class="table">';
-foreach ($stock-data as $row) {
+foreach ($stock_data as $row) {
     if ($firstRow) {
         echo '<thead><tr>';
         foreach ($row as $key => $value) {
