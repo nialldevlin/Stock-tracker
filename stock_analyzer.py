@@ -1,212 +1,276 @@
-#!../stracker/bin/python3
-import pandas as pd
 import numpy as np
-import yfinance as yf
-import matplotlib.pyplot as plt
+import alpaca_trade_api as tradeapi
 from datetime import datetime, timedelta
-import requests
-import json
+import yahoo_fin.stock_info as yf
 
 class Stockalyzer:
-	def __init__(self, ticker, interval='daily', mode='store'):
+	def __init__(self, symbol, interval=tradeapi.TimeFrame.Hour, mode='store'):
 		'''
 		Class to analyze stocks. Also contains simulator to check algorithm
 		Params: ticker - 4 letter stock name eg. 'MSFT'
 				interval='daily'
 		'''
-		if interval not in ('daily', '60min'):
-			raise ValueError('interval must be daily or 60min')
 
-		self.stock = ticker
-		self.interval = interval
-		self.analysis = ''
-		self.ti = {}
-		self.td = {}
-
-		with open('apikey.txt', 'rb') as f:
-			self.apikey = f.read()
-
-		#TODO: Auto adjust periods based on interval
-		if interval == 'daily':
+		if interval == tradeapi.TimeFrame.Day:
 			tpm = 1
-		elif interval == '60min':
+		elif interval == tradeapi.TimeFrame.Hour:
 			tpm = 16
+
 		self.params = {
 			'RSI': {
-				'interval':interval,
-				'time_period':7 * tpm,
-				'series_type':'close'
+				'interval': interval,
+				'time_period': 7 * tpm,
+				'series_type': 'close'
 			},
 			'STOCH': {
-				'interval':interval,
-				'fastkperiod':14 * tpm,
-				'slowkperiod':3 * tpm,
-				'slowdperiod':3 * tpm
+				'interval': interval,
+				'fastkperiod': 14 * tpm,
+				'slowkperiod': 3 * tpm,
+				'slowdperiod': 3 * tpm
 			},
 			'MACDEXT': {
-				'interval':interval,
-				'series_type':'close',
-				'fastperiod':12 * tpm,
-				'slowperiod':26 * tpm,
-				'signalperiod':9 * tpm,
-				'fastmatype':1,
-				'slowmatype':1,
-				'signalmatype':1
+				'interval': interval,
+				'series_type': 'close',
+				'fastperiod': 12 * tpm,
+				'slowperiod': 26 * tpm,
+				'signalperiod': 9 * tpm,
+				'fastmatype': 1,
+				'slowmatype': 1,
+				'signalmatype': 1
 			},
 			'ATR': {
-				'interval':interval,
-				'time_period':7 * tpm
+				'interval': interval,
+				'time_period': 7 * tpm
 			}
-
 		}
-		self.info = pd.DataFrame()
-		self.history = pd.DataFrame()
-		self.getLongData()
 
+		self.stock = symbol
+		self.api = tradeapi.REST('AKO60D937GTSFKPNEWEI', 'rstzhpuuGzhBpJ3ojwT4oswGybvBJcOcfGEpGKwr', 'https://api.alpaca.markets')
+		self.account = self.api.get_account()
+		self.interval = interval
+		self.analysis = ''
 
-	# TODO: Make this better it sucks
-	def getAnalysis(self):
+		start = datetime.today().strftime('%Y-%m-%d')
+		end = (datetime.today() - timedelta(365)).strftime('%Y-%m-%d')
+		self.price_data = self.getPriceData(end, start, interval)
+		if self.price_data.empty:
+			raise AttributeError('No Price Data found for {}'.format(self.stock))
+		self.rsi_data = self.getRSIData()
+		self.stochk_data, self.stochd_data = self.getStochData()
+		self.macd_data, self.macd_sig_data = self.getMACDData()
+		self.avg_50_data = self.price_data['close'].rolling(50).mean()
+		self.avg_200_data = self.price_data['close'].rolling(200).mean()
+
+		self.price = self.getPrice()
+		self.rsi = self.getRSI()
+		self.stochk, self.stochd = self.getStoch()
+		self.macd, self.macd_sig = self.getMACD()
+		self.adr = self.getADR()
+		self.stop = self.price - self.adr
+		self.sell = self.price + self.adr * 2
+		self.avg_50 = self.avg_50_data.tail(1)[0]
+		self.avg_200 = self.avg_200_data.tail(1)[0]
+
+		self.balance_sheet = yf.get_balance_sheet(self.stock)
+		self.income_statement = yf.get_income_statement(self.stock)
+		self.cfs = yf.get_cash_flow(self.stock)
+		self.years = self.balance_sheet.columns
+
+	def getPriceData(self, start, end, interval):
+		return self.api.get_bars(self.stock, interval, start, end, adjustment='raw').df
+
+	def getRSIData(self):
+		# Relative Strength Indicator
+		rsi_period = 7
+		change = self.price_data['close'].tail(rsi_period * 3).diff()
+		up = change.clip(lower=0)
+		down = -1 * change.clip(upper=0)
+		avgu = up.ewm(span=rsi_period, adjust=False).mean()
+		avgd = down.ewm(span=rsi_period, adjust=False).mean()
+		rs = avgu / avgd
+		rsi = 100 - (100 / (1 + rs))
+		return rsi
+
+	def getStochData(self):
+		# Stochastic oscillator
+		data = self.price_data.tail(30)
+		low_d = data['low'].transform(lambda x: x.rolling(window=3).min())
+		high_d = data['high'].transform(lambda x: x.rolling(window=3).max())
+		low_k = data['low'].transform(lambda x: x.rolling(window=14).min())
+		high_k = data['high'].transform(lambda x: x.rolling(window=14).max())
+
+		stochd = ((data['close'] - low_d) / (high_d - low_d)) * 100
+		stochk = ((data['close'] - low_k) / (high_k - low_k)) * 100
+		stochd = stochd.rolling(window = 3).mean()
+		stochk = stochk.rolling(window = 14).mean()
+		return stochk, stochd
+
+	def getMACDData(self):
+		# Moving Average Convergence Divergence
+		data = self.price_data.tail(30)
+		sema = data['close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
+		lema = data['close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+		macd = sema - lema
+		sig = macd.transform(lambda x: x.ewm(span=9, adjust=False).mean())
+		return macd, sig
+
+	def getADR(self):
+		# Average Daily Range
+		l = 7
+		last_week = self.price_data.tail(l)
+		daily_ranges = np.array([])
+		for i in range(l):
+			dr = last_week.iloc[i]['high'] - last_week.iloc[i]['low']
+			hc = np.abs(last_week.iloc[i]['high'] - last_week.iloc[i]['close'])
+			lc = np.abs(last_week.iloc[i]['high'] - last_week.iloc[i]['low'])
+			m = np.array([dr, hc, lc]).max()
+			daily_ranges = np.append(daily_ranges, m)
+		adr = np.mean(daily_ranges)
+		return adr
+
+	def getPrice(self):
+		return self.price_data['close'].iloc[-1]
+
+	def getRSI(self):
+		return self.rsi_data[-1]
+
+	def getStoch(self):
+		return self.stochk_data[-1], self.stochd_data[-1]
+
+	def getMACD(self):
+		return self.macd_data[-1], self.macd_sig_data[-1]
+
+	def getStopPrice(self):
+		return self.stop
+
+	def getSellPrice(self):
+		return self.sell
+
+	def profitability(self):
+		"""
+		Determine profitability of a company using income statement, balance sheet, and cash flow
+		:return: p_score - total profitability score from 0 to 4
+		"""
+		p_score = 0
+
+		# Net Income
+		net_income = self.income_statement[self.years[0]]['netIncome']
+		net_income_last = self.income_statement[self.years[1]]['netIncome']
+		ni_ratio_score = 1 if net_income > net_income_last and net_income > 0 else 0
+		p_score += ni_ratio_score
+
+		# Operating Cash Flow
+		op_cf = self.cfs[self.years[0]]['totalCashFromOperatingActivities']
+		of_cf_score = 1 if op_cf > 0 else 0
+		p_score += of_cf_score
+
+		# Return on Assets
+		avg_assets = (self.balance_sheet[self.years[0]]['totalAssets'] + self.balance_sheet[self.years[1]]['totalAssets']) / 2
+		avg_assets_last = (self.balance_sheet[self.years[1]]['totalAssets'] + self.balance_sheet[self.years[2]]['totalAssets']) / 2
+		RoA = net_income / avg_assets
+		RoA_last = net_income_last / avg_assets_last
+		RoA_score = 1 if RoA > RoA_last else 0
+		p_score += RoA_score
+
+		# Accruals
+		total_assets = self.balance_sheet[self.years[0]]['totalAssets']
+		accruals = op_cf / total_assets - RoA
+		acc_score = 1 if accruals > 0 else 0
+		p_score += acc_score
+
+		return p_score
+
+	def leverage(self):
+		"""
+		Determine leverage of a company with balance sheet
+		:return: l_score - total leverage score from 0 to 2
+		"""
+		l_score = 0
+
+		# Long-term debt ratio
+		try:
+			ltd = self.balance_sheet[self.years[0]]['longTermDebt']
+			total_assets = self.balance_sheet[self.years[0]]['totalAssets']
+			debt_ratio = ltd / total_assets
+			dr_score = 1 if debt_ratio < 0.4 else 0
+			l_score += dr_score
+		except:
+			l_score += 1
+
+		# Current ratio
+		current_assets = self.balance_sheet[self.years[0]]['totalCurrentAssets']
+		current_liab = self.balance_sheet[self.years[0]]['totalCurrentLiabilities']
+		current_ratio = current_assets / current_liab
+		cr_score = 1 if current_ratio > 1 else 0
+		l_score += cr_score
+
+		return l_score
+
+	def operating_efficiency(self):
+		"""
+		Determine operating efficency of a company
+		:return: oe_score - score representing operating efficency from 0 to 2
+		"""
+		oe_score = 0
+
+		# Gross margin
+		gp = self.income_statement[self.years[0]]['grossProfit']
+		gp_last = self.income_statement[self.years[1]]['grossProfit']
+		revenue = self.income_statement[self.years[0]]['totalRevenue']
+		revenue_last = self.income_statement[self.years[1]]['totalRevenue']
+		gm = gp / revenue
+		gm_last = gp_last / revenue_last
+		gm_score = 1 if gm > gm_last else 0
+		oe_score += gm_score
+
+		# Asset turnover
+		avg_assets = (self.balance_sheet[self.years[0]]['totalAssets'] + self.balance_sheet[self.years[1]]['totalAssets']) / 2
+		avg_assets_last = (self.balance_sheet[self.years[1]]['totalAssets'] + self.balance_sheet[self.years[2]]['totalAssets']) / 2
+		at = revenue / avg_assets
+		at_last = revenue_last / avg_assets_last
+		at_score = 1 if at > at_last else 0
+		oe_score += at_score
+
+		return oe_score
+
+	def get_score(self):
+		"""
+		Returns total score based on profitability, leverage, and operating efficiency
+		:return: s - total score from 0 (worst) to 8 (best)
+		"""
+		s = self.profitability() + self.leverage() + self.operating_efficiency()
+		return s
+
+	def get_analysis(self, timestamp='now'):
 		'''
 		Returns an analysis of given stock in terms of a buy,
 		sell, or hold position. Estimated 9% gain
 		Return: string 'Buy', 'Sell', or 'Hold'
 		'''
-		return self.analysis
-	
-	def Wilder(self, data, periods):
-		start = np.where(~np.isnan(data))[0][0] #Check if nans present in beginning
-		Wilder = np.array([np.nan]*len(data))
-		Wilder[start+periods-1] = data[start:(start+periods)].mean() #Simple Moving Average
-		for i in range(start+periods,len(data)):
-			Wilder[i] = (Wilder[i-1]*(periods-1) + data[i])/periods #Wilder Smoothing
-		return(Wilder)
-	
-	#TODO separate into functions for indicators
-	#TODO get short data
-	def getLongData(self):
-		ticker = yf.Ticker(self.stock)
-		info = ticker.info
-		important_data = [
-			'fiftyDayAverage',
-			'twoHundredDayAverage',
-			'currentPrice',
-			'trailingPE'
-		]
-		important_info = {}
-		for i in info:
-			if i in important_data:
-				important_info[i] = info[i]
-		self.history = pd.DataFrame(ticker.history(period='1y', interval='1d'))
-		if 'currentPrice' not in important_info:
-			important_info['currentPrice'] = self.history['Close'].tail(1)[0]
-
-		self.td['price'] = self.history['Close']
-
-		#Average Daily Range
-		last_week = self.history.tail(7)
-		daily_ranges = np.array([])
-		for i in range(7):
-			dr = last_week.iloc[i]['High'] - last_week.iloc[i]['Low']
-			hc = np.abs(last_week.iloc[i]['High'] - last_week.iloc[i]['Close'])
-			lc = np.abs(last_week.iloc[i]['High'] - last_week.iloc[i]['Low'])
-			m = np.array([dr, hc, lc]).max()
-			daily_ranges = np.append(daily_ranges, m)
-		adr = np.mean(daily_ranges)
-		self.ti['adr'] = adr
-
-		#Stochastic oscillator
-		low_d = self.history['Low'].transform(lambda x: x.rolling(window = 3).min())
-		high_d = self.history['High'].transform(lambda x: x.rolling(window = 3).max())
-		low_k = self.history['Low'].transform(lambda x: x.rolling(window = 14).min())
-		high_k = self.history['High'].transform(lambda x: x.rolling(window = 14).max())
-
-		stochd = ((self.history['Close'] - low_d)/(high_d - low_d))*100
-		stochk = ((self.history['Close'] - low_k)/(high_k - low_k))*100
-
-		self.td['stochd'] = stochd.rolling(window = 3).mean()
-		self.td['stochk'] = stochk.rolling(window = 14).mean()
-
-		#self.td['stoch ratio'] = self.td['stochd s']/self.td['stochd l']
-
-		#Relative Strength Indicator
-		rsi_period = 7
-		change = self.history['Close'].diff()
-		up = change.clip(lower=0)
-		down = -1 * change.clip(upper=0)
-		avgu = up.ewm(span=rsi_period, adjust=False).mean()
-		avgd = down.ewm(span=rsi_period, adjust=False).mean()
-		rs = avgu / avgd 
-		self.td['rsi'] = 100 - (100/(1 + rs))
-		
-		#Moving Average Convergence Divergence
-		sema = self.history['Close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
-		lema = self.history['Close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
-		self.td['macd'] = sema - lema
-		self.td['signal'] = self.td['macd'].transform(lambda x: x.ewm(span=9, adjust=False).mean())
-		self.td = pd.DataFrame(self.td)
-
-		rsi = self.td['rsi'].tail(1)[0]
-		self.ti['rsi'] = rsi
-		adr = self.ti['adr']
-		price = important_info['currentPrice']
-		self.ti['price'] = price
-		stochd = self.td['stochd'].tail(1)[0]
-		self.ti['stochd'] = stochd
-		stochk = self.td['stochk'].tail(1)[0]
-		stochk_d = self.td['stochk'].tail(2)[1] - self.td['stochk'].tail(2)[0]
-		self.ti['stochk'] = stochk
-		macd = self.td['macd'].tail(1)[0]
-		self.ti['macd'] = macd
-		sig = self.td['signal'].tail(1)[0]
-		self.ti['sig'] = sig
-		self.ti['sell price'] = price + 2 * adr
-		self.ti['stop price'] = price - adr
-
-		print(self.stock, self.ti)
-		if rsi > 50 and stochk > 50 and stochk_d > 0 and macd > sig:
-			self.analysis = 'Rise'
-		elif rsi < 50 and stochd < 50 and macd < sig:
-			self.analysis = 'Fall'
+		if timestamp == 'now':
+			rsi = self.rsi
+			stoch = self.stochk
+			macd = self.macd > self.macd_sig
+			up = self.price > self.avg_50 and self.avg_50 > self.avg_200
 		else:
-			self.analysis = 'Hold'
-	
-	def getCurrentPrice(self):
-		return self.ti['price']
+			rsi = self.rsi_data.loc[timestamp]
+			stoch = self.stochk_data.loc[timestamp]
+			macd = self.macd_data.loc[timestamp] > self.macd_sig_data.loc[timestamp]
+			if timestamp in self.avg_200_data.index:
+				up = (self.price_data.loc[timestamp] > self.avg_50_data.loc[timestamp]
+					  and self.avg_50_data.loc[timestamp] > self.avg_200_data.loc[timestamp])
+			else:
+				up = True
 
-	def display(self, filename=''):
-		'''
-		Displays graph of stock and averages with matplotlib
-		'''
-
-		if self.analysis == 'Rise':
-			color = 'chartreuse'
-		elif self.analysis == 'Fall':
-			color = 'r'
+		if (rsi > 50 and
+			stoch > 50 and
+			macd and
+			up):
+			return 'Buy'
+		elif (rsi < 50 and
+			  stoch < 50 and
+			  macd and
+			  not up):
+			return 'Sell'
 		else:
-			color = 'dimgray'
-		fig, ax = plt.subplots(nrows=3, figsize=(6, 6))
-		ax[0].axhline(y=self.ti['stop price'], color='r', label='Stop Price {:.2f}'.format(self.ti['stop price']))
-		ax[0].axhline(y=self.ti['sell price'], color='chartreuse', label='Target Price{:.2f}'.format(self.ti['sell price']))
-		ax[0].title.set_text('{} Stock Data: {} at {:.2f}'.format(self.stock, self.analysis, self.ti['price']))
-		ax[0].legend(loc='upper left')
-		ax[0].set_xlabel('Date')
-		ax[0].set_ylabel('Price')
-		ax[0].plot(self.td['price'], color=color, label='{} Price'.format(self.stock))
-		ax[1].axhline(y=50)
-		ax[1].set_xlabel('Date')
-		ax[1].set_ylabel('Value')
-		ax[1].title.set_text('{} Technical Indicators - RSI, Stochastic'.format(self.stock, self.ti['rsi'], self.ti['stochk']))
-		ax[1].plot(self.td['rsi'], label='RSI {:.2f}'.format(self.ti['rsi']))
-		ax[1].plot(self.td['stochk'], label='Stochastic Long {:.2f}'.format(self.ti['stochk']))
-		ax[1].plot(self.td['stochd'], label='Stochastic Short {:.2f}'.format(self.ti['stochd']))
-		ax[1].legend(loc='upper left')
-		ax[2].title.set_text('{} MACD and Signal line'.format(self.stock, self.ti['macd'], self.ti['sig']))
-		ax[2].plot(self.td['macd'], label='MACD {:.2f}'.format(self.ti['macd']))
-		ax[2].plot(self.td['signal'], label='Signal {:.2f}'.format(self.ti['sig']))
-		ax[2].legend(loc='upper left')
-		fig.tight_layout()
-		if filename:
-			plt.savefig(filename)
-		else:
-			plt.show()
-		plt.clf()
+			return 'Hold'
