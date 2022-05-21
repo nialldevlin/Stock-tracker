@@ -1,6 +1,5 @@
 <?php
 /* Credit sqlitetutorial.net/sqlite-php/connect/ */
-namespace App;
 
 class Config {
    /**

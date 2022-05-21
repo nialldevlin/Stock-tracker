@@ -2,7 +2,7 @@
 <body>
 
 <?php
-include('app/SQLiteConnection.php');
+require_once('SQLiteConnection.php');
 
 $SQLC = new SQLiteConnection();
 $pdo = $SQLC->connect();
@@ -10,6 +10,11 @@ if ($pdo != null)
     echo 'Connected to the SQLite database successfully!';
 else
     echo 'Whoops, could not connect to the SQLite database!';
+
+echo "<br>";
+echo "<a href='index.html'>Return</a>";
+echo "<br>";
+echo "Results: <br>";
 
 $symbol = $_GET["Symbol"];
 $min_price = $_GET["min-price"];
