@@ -2,6 +2,8 @@ import numpy as np
 import alpaca_trade_api as tradeapi
 from datetime import datetime, timedelta
 import yahoo_fin.stock_info as yf
+from dotenv import load_dotenv
+import os
 
 class Stockalyzer:
 	def __init__(self, symbol, interval=tradeapi.TimeFrame.Hour, mode='store'):
@@ -10,6 +12,7 @@ class Stockalyzer:
 		Params: ticker - 4 letter stock name eg. 'MSFT'
 				interval='daily'
 		'''
+		load_dotenv()
 
 		if interval == tradeapi.TimeFrame.Day:
 			self.tpm = 1
@@ -45,7 +48,10 @@ class Stockalyzer:
 		}
 
 		self.stock = symbol
-		self.api = tradeapi.REST('AKO60D937GTSFKPNEWEI', 'rstzhpuuGzhBpJ3ojwT4oswGybvBJcOcfGEpGKwr', 'https://api.alpaca.markets')
+		# Live trading: https://api.alpaca.markets
+		# Paper trading: https://paper-api.alpaca.markets
+		# Be sure to change keys in .env file as well
+		self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), 'https://api.alpaca.markets')
 		self.account = self.api.get_account()
 		self.interval = interval
 		self.analysis = ''

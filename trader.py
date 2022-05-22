@@ -25,7 +25,7 @@ class Trader:
         return orders
 
     def buyPositions(self):
-        db = r"db/stockdb.sqlite"
+        db = r"stockdb.sqlite"
         conn = sqlite3.connect(db)
         c = conn.cursor()
         df = pd.read_sql('SELECT * FROM stockdb', conn)
