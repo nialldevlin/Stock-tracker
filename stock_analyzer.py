@@ -12,35 +12,35 @@ class Stockalyzer:
 		'''
 
 		if interval == tradeapi.TimeFrame.Day:
-			tpm = 1
+			self.tpm = 1
 		elif interval == tradeapi.TimeFrame.Hour:
-			tpm = 16
+			self.tpm = 16
 
 		self.params = {
 			'RSI': {
 				'interval': interval,
-				'time_period': 7 * tpm,
+				'time_period': 7 * self.tpm,
 				'series_type': 'close'
 			},
 			'STOCH': {
 				'interval': interval,
-				'fastkperiod': 14 * tpm,
-				'slowkperiod': 3 * tpm,
-				'slowdperiod': 3 * tpm
+				'fastkperiod': 14 * self.tpm,
+				'slowkperiod': 3 * self.tpm,
+				'slowdperiod': 3 * self.tpm
 			},
 			'MACDEXT': {
 				'interval': interval,
 				'series_type': 'close',
-				'fastperiod': 12 * tpm,
-				'slowperiod': 26 * tpm,
-				'signalperiod': 9 * tpm,
+				'fastperiod': 12 * self.tpm,
+				'slowperiod': 26 * self.tpm,
+				'signalperiod': 9 * self.tpm,
 				'fastmatype': 1,
 				'slowmatype': 1,
 				'signalmatype': 1
 			},
 			'ATR': {
 				'interval': interval,
-				'time_period': 7 * tpm
+				'time_period': 7 * self.tpm
 			}
 		}
 
@@ -61,11 +61,11 @@ class Stockalyzer:
 		self.avg_50_data = self.price_data['close'].rolling(50).mean()
 		self.avg_200_data = self.price_data['close'].rolling(200).mean()
 
-		self.price = self.getPrice()
 		self.rsi = self.getRSI()
 		self.stochk, self.stochd = self.getStoch()
 		self.macd, self.macd_sig = self.getMACD()
 		self.adr = self.getADR()
+		self.price = self.getPrice()
 		self.stop = self.price - self.adr
 		self.sell = self.price + self.adr * 2
 		self.avg_50 = self.avg_50_data.tail(1)[0]
@@ -116,20 +116,20 @@ class Stockalyzer:
 
 	def getADR(self):
 		# Average Daily Range
-		l = 7
+		l = 7 * self.tpm
 		last_week = self.price_data.tail(l)
 		daily_ranges = np.array([])
-		for i in range(l):
-			dr = last_week.iloc[i]['high'] - last_week.iloc[i]['low']
-			hc = np.abs(last_week.iloc[i]['high'] - last_week.iloc[i]['close'])
-			lc = np.abs(last_week.iloc[i]['high'] - last_week.iloc[i]['low'])
-			m = np.array([dr, hc, lc]).max()
-			daily_ranges = np.append(daily_ranges, m)
+		for i in range(0, l, self.tpm):
+			day = last_week.iloc[i:i+self.tpm]
+			daily_high = day['high'].max() 
+			daily_low = day['low'].min()
+			daily_ranges = np.append(daily_ranges, daily_high - daily_low)
+
 		adr = np.mean(daily_ranges)
 		return adr
 
 	def getPrice(self):
-		return self.price_data['close'].iloc[-1]
+		return self.price_data['close'].iloc[-1]- self.adr/4
 
 	def getRSI(self):
 		return self.rsi_data[-1]
@@ -141,10 +141,10 @@ class Stockalyzer:
 		return self.macd_data[-1], self.macd_sig_data[-1]
 
 	def getStopPrice(self):
-		return self.stop
+		return self.getPrice() - self.adr
 
 	def getSellPrice(self):
-		return self.sell
+		return self.getPrice() + self.adr * 2
 
 	def profitability(self):
 		"""
