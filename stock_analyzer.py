@@ -48,10 +48,10 @@ class Stockalyzer:
 		}
 
 		self.stock = symbol
-		# Live trading: https://api.alpaca.markets
-		# Paper trading: https://paper-api.alpaca.markets
+		live_trading = 'https://api.alpaca.markets'
+		paper_trading = 'https://paper-api.alpaca.markets'
 		# Be sure to change keys in .env file as well
-		self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), 'https://api.alpaca.markets')
+		self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), live_trading)
 		self.account = self.api.get_account()
 		self.interval = interval
 		self.analysis = ''
