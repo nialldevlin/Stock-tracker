@@ -5,7 +5,10 @@ import logging
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 	trader = Trader()
-    logging.basicConfig(filename='log/screener.log', encoding='utf-8', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                        level=logging.INFO,
+                        datefmt='%Y-%m-%d %H:%M:%S'
+                        logging.info('Getting stock list')
 	logging.info('Evaluating current info')
 	logging.info(trader.evalinfo())
 	logging.info('Evaluating new info')

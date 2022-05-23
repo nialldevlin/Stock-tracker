@@ -9,6 +9,10 @@ import os
 
 class Trader:
     def __init__(self):
+        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                            level=logging.INFO,
+                            datefmt='%Y-%m-%d %H:%M:%S'
+                            logging.info('Getting stock list')
         load_dotenv()
         live_trading = 'https://api.alpaca.markets'
         paper_trading = 'https://paper-api.alpaca.markets'
@@ -22,6 +26,10 @@ class Trader:
             symbol = pos.symbol.strip()
             s = Stockalyzer(symbol)
             if s.get_analysis() != 'Buy':
+                orders = self.api.list_orders()
+                for order in orders:
+                    if order['symbol'] == symbol:
+                        self.api.cancel_order(order['id'])
                 self.api.submit_order(symbol, qty=pos['qty'], side='sell', type='market')
                 orders.append(symbol)
         return orders
@@ -42,13 +50,16 @@ class Trader:
         stop_price = round(best_stock['Stop'], 2)
 
         buy_amount = int(buying_power / buy_price)
-        self.api.submit_order(best_stock['Symbol'],
-                              qty=buy_amount,
-                              side='buy',
-                              type='market',
-                              time_in_force='day',
-                              order_class='bracket',
-                              take_profit={'limit_price':tp_price},
-                              stop_loss={'stop_price':stop_price,
-                              'limit_price':stop_price})
+        try:
+            self.api.submit_order(best_stock['Symbol'],
+                                  qty=buy_amount,
+                                  side='buy',
+                                  type='market',
+                                  time_in_force='day',
+                                  order_class='bracket',
+                                  take_profit={'limit_price':tp_price},
+                                  stop_loss={'stop_price':stop_price,
+                                  'limit_price':stop_price})
+        except Exception as ex:
+            logging.error(ex)
         return best_stock
