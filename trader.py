@@ -6,6 +6,7 @@ import sqlite3
 import re
 from dotenv import load_dotenv
 import os
+import logging
 
 class Trader:
     def __init__(self):
