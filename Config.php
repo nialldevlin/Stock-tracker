@@ -5,7 +5,7 @@ class Config {
    /**
     * path to the sqlite file
     */
-    const PATH_TO_SQLITE_FILE = 'db/stockdb.sqlite';
+    const PATH_TO_SQLITE_FILE = 'stockdb.sqlite';
 
 }
 ?>
