@@ -1,1 +1,13 @@
 2022-05-23 14:02:29 INFO     Evaluating current info
+2022-05-23 14:03:19 INFO     Evaluating current info
+2022-05-23 14:03:23 INFO     []
+2022-05-23 14:03:23 INFO     Evaluating new info
+2022-05-23 14:03:23 ERROR    insufficient buying power
+2022-05-23 14:03:23 INFO     index             308
+Symbol            MRO
+Analysis          Buy
+Price       27.787264
+Stop        26.095121
+Sell         31.17155
+Score               8
+Name: 308, dtype: object
