@@ -3,6 +3,8 @@
 
 <?php
 require_once('SQLiteConnection.php');
+$lastModifiedTimestamp = filemtime("stockdb.sqlite");
+$lastModifiedDatetime = date("d M Y H:i:s", $lastModifiedTimestamp);
 
 $SQLC = new SQLiteConnection();
 $pdo = $SQLC->connect();
@@ -22,8 +24,6 @@ $max_price = $_GET["max-price"];
 $analysis = $_GET["analysis"];
 $stock_data = $SQLC->getStockData($symbol, $min_price, $max_price, $analysis);
 
-$lastModifiedTimestamp = filemtime("stockdb.sqlite");
-$lastModifiedDatetime = date("d M Y H:i:s", $lastModifiedTimestamp);
 echo "Last Updated: ";
 echo $lastModifiedDatetime;
 
