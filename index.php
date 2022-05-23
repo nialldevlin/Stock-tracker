@@ -24,8 +24,8 @@ $stock_data = $SQLC->getStockData($symbol, $min_price, $max_price, $analysis);
 
 $lastModifiedTimestamp = filemtime("stockdb.sqlite");
 $lastModifiedDatetime = date("d M Y H:i:s", $lastModifiedTimestamp);
-echo "Last Updated: "
-echo $lastModifiedDatetime
+echo "Last Updated: ";
+echo $lastModifiedDatetime;
 
 $firstRow = true;
 echo '<div class="table-responsive"><table class="table">';
