@@ -10,6 +10,6 @@ if __name__ == '__main__':
                         level=logging.INFO,
                         datefmt='%Y-%m-%d %H:%M:%S')
     logging.info('Evaluating current info')
-    logging.info(trader.evalinfo())
+    logging.info(trader.evalPositions())
     logging.info('Evaluating new info')
-    logging.info(trader.buyinfo())
+    logging.info(trader.buyPositions())
