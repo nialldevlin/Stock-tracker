@@ -31,7 +31,7 @@ class Screener:
                 logging.info('{}/{}: {} at {}, {}'.format(i, l, s['Symbol'], s['Price'], s['Analysis']))
                 s_list.append(s)
             except Exception as ex:
-                logging.error(ticker, ex)
+                logging.error("{} {}".format(ticker, ex))
         df = pd.concat(s_list, axis=1).T
         return df
 
