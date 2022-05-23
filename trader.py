@@ -9,9 +9,10 @@ import os
 
 class Trader:
     def __init__(self):
-        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+        logging.basicConfig(filename='log/trader.log',
+                            format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
-                            datefmt='%Y-%m-%d %H:%M:%S'
+                            datefmt='%Y-%m-%d %H:%M:%S')
                             logging.info('Getting stock list')
         load_dotenv()
         live_trading = 'https://api.alpaca.markets'

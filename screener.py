@@ -5,9 +5,10 @@ import logging
 
 class Screener:
     def __init__(self):
-        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+        logging.basicConfig(filename='log/screener.log',
+                            format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
-                            datefmt='%Y-%m-%d %H:%M:%S'
+                            datefmt='%Y-%m-%d %H:%M:%S')
                             logging.info('Getting stock list')
         self.list = yf.tickers_sp500()
         self.data = self.getData()

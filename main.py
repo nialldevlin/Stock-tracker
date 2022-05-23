@@ -4,12 +4,13 @@ import logging
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-	trader = Trader()
-    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+    trader = Trader()
+    logging.basicConfig(filename='log/main.log',
+                        format='%(asctime)s %(levelname)-8s %(message)s',
                         level=logging.INFO,
-                        datefmt='%Y-%m-%d %H:%M:%S'
+                        datefmt='%Y-%m-%d %H:%M:%S')
                         logging.info('Getting stock list')
-	logging.info('Evaluating current info')
-	logging.info(trader.evalinfo())
-	logging.info('Evaluating new info')
-	logging.info(trader.buyinfo())
+    logging.info('Evaluating current info')
+    logging.info(trader.evalinfo())
+    logging.info('Evaluating new info')
+    logging.info(trader.buyinfo())
