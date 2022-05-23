@@ -1,16 +1,18 @@
 import yahoo_fin.stock_info as yf
 import pandas as pd
 from stock_analyzer import Stockalyzer
+import logging
 
 class Screener:
     def __init__(self):
-        print('Getting stock list')
+        logging.basicConfig(filename='log/screener.log', level=logging.INFO)
+        logging.info('Getting stock list')
         self.list = yf.tickers_sp500()
         self.data = self.getData()
         self.buy = self.getBuy()
 
     def getData(self):
-        print('Evaluating stock list')
+        logging.info('Evaluating stock list')
         list = self.list
         indx = ['Symbol', 'Analysis', 'Price', 'Stop', 'Sell', 'Score']
         s_list = []
@@ -26,10 +28,10 @@ class Screener:
                                sto.getSellPrice(),
                                sto.get_score()], index=indx)
                 i += 1
-                print('{}/{}: {} at {}, {}'.format(i, l, s['Symbol'], s['Price'], s['Analysis']))
+                logging.info('{}/{}: {} at {}, {}'.format(i, l, s['Symbol'], s['Price'], s['Analysis']))
                 s_list.append(s)
             except Exception as ex:
-                print(ticker, ex)
+                logging.error(ticker, ex)
         df = pd.concat(s_list, axis=1).T
         return df
 
