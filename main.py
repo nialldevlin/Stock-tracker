@@ -9,7 +9,6 @@ if __name__ == '__main__':
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         level=logging.INFO,
                         datefmt='%Y-%m-%d %H:%M:%S')
-    logging.info('Getting stock list')
     logging.info('Evaluating current info')
     logging.info(trader.evalinfo())
     logging.info('Evaluating new info')

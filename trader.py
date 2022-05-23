@@ -13,7 +13,6 @@ class Trader:
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
                             datefmt='%Y-%m-%d %H:%M:%S')
-                            logging.info('Getting stock list')
         load_dotenv()
         live_trading = 'https://api.alpaca.markets'
         paper_trading = 'https://paper-api.alpaca.markets'
