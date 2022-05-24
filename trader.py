@@ -31,7 +31,7 @@ class Trader:
                 for order in orders:
                     if order['symbol'] == symbol:
                         self.api.cancel_order(order['id'])
-                self.api.submit_order(symbol, qty=pos['qty'], side='sell', type='market')
+                self.api.submit_order(symbol, qty=pos.qty, side='sell', type='market')
                 orders.append(symbol)
         return orders
 
