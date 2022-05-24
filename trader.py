@@ -47,19 +47,17 @@ class Trader:
         buy_list = df.loc[df['Analysis'] == 'Buy']
         buying_power = float(self.account.buying_power)
         buy_list = buy_list.loc[buy_list['Score'] == 8].sort_values(by=['Price'])
-        best_stock = None
+        best_stock = pd.Series()
         if len(buy_list.index) == 0:
             logging.info('No stocks found to buy')
             return "No Stocks Found"
         
         for i in range(len(buy_list.index)):
-            print(buy_list.iloc[i])
             analysis = Stockalyzer(buy_list.iloc[i]['Symbol']).get_analysis()
             if analysis == 'Buy':
                 best_stock = buy_list.iloc[i]
-                print(best_stock)
                 break
-        if best_stock == None:
+        if best_stock.empty():
             logging.info('No stocks found to buy')
             return "No Stocks Found"
         buy_price = round(best_stock['Price'], 2)

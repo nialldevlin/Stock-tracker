@@ -55,7 +55,6 @@ class Stockalyzer:
         self.account = self.api.get_account()
         self.interval = interval
         self.analysis = ''
-        print('1')
 
         start = datetime.today().strftime('%Y-%m-%d')
         end = (datetime.today() - timedelta(200)).strftime('%Y-%m-%d')
@@ -65,7 +64,6 @@ class Stockalyzer:
         self.rsi_data = self.getRSIData()
         self.stochk_data, self.stochd_data = self.getStochData()
         self.macd_data, self.macd_sig_data = self.getMACDData()
-        print('2')
 
         self.rsi = self.getRSI()
         self.stochk, self.stochd = self.getStoch()
@@ -76,13 +74,11 @@ class Stockalyzer:
         self.sell = self.price + self.adr * 2
         self.avg_50 = self.price_data['close'].tail(50).mean()
         self.avg_200 = self.price_data['close'].tail(200).mean()
-        print('3')
 
         self.balance_sheet = yf.get_balance_sheet(self.stock)
         self.income_statement = yf.get_income_statement(self.stock)
         self.cfs = yf.get_cash_flow(self.stock)
         self.years = self.balance_sheet.columns
-        print('4')
 
     def getPriceData(self, start, end, interval):
         return self.api.get_bars(self.stock, interval, start, end, adjustment='raw').df
