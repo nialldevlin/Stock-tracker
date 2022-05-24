@@ -51,7 +51,8 @@ class Trader:
         stop_price = round(best_stock['Stop'], 2)
 
         buy_amount = int(buying_power / buy_price)
-        print(buy_amount)
+        print(buy_amount)
+        print(buy_amount)
         try:
             self.api.submit_order(best_stock['Symbol'],
                                   qty=buy_amount,
