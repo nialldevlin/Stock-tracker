@@ -5,7 +5,7 @@ import logging
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     trader = Trader()
-    logging.basicConfig(filename='log/main.log',
+    logging.basicConfig(filename='/var/www/html/log/main.log',
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         level=logging.INFO,
                         datefmt='%Y-%m-%d %H:%M:%S')

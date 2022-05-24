@@ -5,7 +5,7 @@ import logging
 
 class Screener:
     def __init__(self):
-        logging.basicConfig(filename='log/screener.log',
+        logging.basicConfig(filename='/var/www/html/log/screener.log',
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
                             datefmt='%Y-%m-%d %H:%M:%S')

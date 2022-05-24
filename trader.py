@@ -10,7 +10,7 @@ import logging
 
 class Trader:
     def __init__(self):
-        logging.basicConfig(filename='log/trader.log',
+        logging.basicConfig(filename='/var/www/html/log/trader.log',
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
                             datefmt='%Y-%m-%d %H:%M:%S')
