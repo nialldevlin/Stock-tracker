@@ -6,7 +6,7 @@ import sqlite3
 import os
 
 if __name__ == '__main__':
-	screener = Screener()
+	screener = Screener(True)
 	data = screener.data
 
 	conn = sqlite3.connect("stockdb.sqlite")
