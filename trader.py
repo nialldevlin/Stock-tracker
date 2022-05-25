@@ -10,7 +10,7 @@ import os
 import logging
 
 class Trader:
-    def __init__(self):
+    def __init__(self, buy_list=None):
         logging.basicConfig(filename='/var/www/html/log/trader.log',
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
@@ -21,6 +21,11 @@ class Trader:
         self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), paper_trading)
         self.account = self.api.get_account()
         self.positions = self.api.list_positions()
+        if buy_list:
+            self.buy_list = self.buy_list
+            self.has_buy_list = True
+        else:
+            self.has_buy_list = False
 
     def evalPositions(self):
         orders = []
@@ -39,12 +44,14 @@ class Trader:
         return orders
 
     def buyPositions(self):
-        db = r"stockdb.sqlite"
-        conn = sqlite3.connect(db)
-        c = conn.cursor()
-        df = pd.read_sql('SELECT * FROM stockdb', conn)
-        
-        buy_list = df.loc[df['Analysis'] == 'Buy']
+        if not self.has_buy_list:
+            db = r"stockdb.sqlite"
+            conn = sqlite3.connect(db)
+            c = conn.cursor()
+            df = pd.read_sql('SELECT * FROM stockdb', conn)
+            buy_list = df.loc[df['Analysis'] == 'Buy']
+        else:
+            buy_list = self.buy_list
         buying_power = float(self.account.buying_power)
         buy_list = buy_list.loc[buy_list['Score'] == 8].sort_values(by=['Price'])
         

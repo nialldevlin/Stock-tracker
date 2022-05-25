@@ -2,7 +2,7 @@
 
 from screener import Screener
 import pandas as pd
-import sqlite3
+
 import os
 
 if __name__ == '__main__':
