@@ -1,9 +1,12 @@
 import numpy as np
+import pandas as pd
 import alpaca_trade_api as tradeapi
 from datetime import datetime, timedelta
 import yahoo_fin.stock_info as yf
 from dotenv import load_dotenv
 import os
+import requests
+import json
 
 class Stockalyzer:
     def __init__(self, symbol, interval=tradeapi.TimeFrame.Hour, mode='store'):
@@ -74,11 +77,16 @@ class Stockalyzer:
         self.sell = self.price + self.adr * 2
         self.avg_50 = self.price_data['close'].tail(50).mean()
         self.avg_200 = self.price_data['close'].tail(200).mean()
-
-        self.balance_sheet = yf.get_balance_sheet(self.stock)
-        self.income_statement = yf.get_income_statement(self.stock)
-        self.cfs = yf.get_cash_flow(self.stock)
-        self.years = self.balance_sheet.columns
+        
+        # Financial Modelling prep API
+        balance_sheet_statment_url = f'https://financialmodelingprep.com/api/v3/balance-sheet-statement/{self.stock}?apikey=96ff3f5141849577016f72178d46f48f'
+        income_statement_url = f'https://financialmodelingprep.com/api/v3/income-statement/{self.stock}?apikey=96ff3f5141849577016f72178d46f48f'
+        cash_flow_statement_url = f'https://financialmodelingprep.com/api/v3/cash-flow-statement/{self.stock}?apikey=96ff3f5141849577016f72178d46f48f'
+        self.balance_sheet = pd.DataFrame.from_dict(requests.get(balance_sheet_statment_url).json())
+        self.income_statement = pd.DataFrame.from_dict(requests.get(income_statement_url).json())
+        self.cfs = pd.DataFrame.from_dict(requests.get(cash_flow_statement_url).json())
+        
+        self.years = self.balance_sheet.index
 
     def getPriceData(self, start, end, interval):
         return self.api.get_bars(self.stock, interval, start, end, adjustment='raw').df
@@ -133,7 +141,7 @@ class Stockalyzer:
         return adr
 
     def getPrice(self):
-        return self.price_data['close'].iloc[-1]- self.adr/4
+        return self.price_data['close'].iloc[-1]
 
     def getRSI(self):
         return self.rsi_data[-1]
@@ -156,28 +164,28 @@ class Stockalyzer:
         :return: p_score - total profitability score from 0 to 4
         """
         p_score = 0
-
+#TODO fix
         # Net Income
-        net_income = self.income_statement[self.years[0]]['netIncome']
-        net_income_last = self.income_statement[self.years[1]]['netIncome']
+        net_income = self.income_statement['netIncome'].loc[self.years[0]]
+        net_income_last = self.income_statement['netIncome'].loc[self.years[1]]
         ni_ratio_score = 1 if net_income > net_income_last and net_income > 0 else 0
         p_score += ni_ratio_score
 
         # Operating Cash Flow
-        op_cf = self.cfs[self.years[0]]['totalCashFromOperatingActivities']
+        op_cf = self.cfs['netCashProvidedByOperatingActivities'].loc[self.years[0]]
         of_cf_score = 1 if op_cf > 0 else 0
         p_score += of_cf_score
 
         # Return on Assets
-        avg_assets = (self.balance_sheet[self.years[0]]['totalAssets'] + self.balance_sheet[self.years[1]]['totalAssets']) / 2
-        avg_assets_last = (self.balance_sheet[self.years[1]]['totalAssets'] + self.balance_sheet[self.years[2]]['totalAssets']) / 2
+        avg_assets = (self.balance_sheet['totalAssets'].loc[self.years[0]] + self.balance_sheet['totalAssets'].loc[self.years[0]]) / 2
+        avg_assets_last = (self.balance_sheet['totalAssets'].loc[self.years[1]] + self.balance_sheet['totalAssets'].loc[self.years[1]]) / 2
         RoA = net_income / avg_assets
         RoA_last = net_income_last / avg_assets_last
         RoA_score = 1 if RoA > RoA_last else 0
         p_score += RoA_score
 
         # Accruals
-        total_assets = self.balance_sheet[self.years[0]]['totalAssets']
+        total_assets = self.balance_sheet['totalAssets'].loc[self.years[0]]
         accruals = op_cf / total_assets - RoA
         acc_score = 1 if accruals > 0 else 0
         p_score += acc_score
@@ -193,8 +201,8 @@ class Stockalyzer:
 
         # Long-term debt ratio
         try:
-            ltd = self.balance_sheet[self.years[0]]['longTermDebt']
-            total_assets = self.balance_sheet[self.years[0]]['totalAssets']
+            ltd = self.balance_sheet['longTermDebt'].loc[self.years[0]]
+            total_assets = self.balance_sheet['totalAssets'].loc[self.years[0]]
             debt_ratio = ltd / total_assets
             dr_score = 1 if debt_ratio < 0.4 else 0
             l_score += dr_score
@@ -202,8 +210,8 @@ class Stockalyzer:
             l_score += 1
 
         # Current ratio
-        current_assets = self.balance_sheet[self.years[0]]['totalCurrentAssets']
-        current_liab = self.balance_sheet[self.years[0]]['totalCurrentLiabilities']
+        current_assets = self.balance_sheet['totalCurrentAssets'].loc[self.years[0]]
+        current_liab = self.balance_sheet['totalCurrentLiabilities'].loc[self.years[0]]
         current_ratio = current_assets / current_liab
         cr_score = 1 if current_ratio > 1 else 0
         l_score += cr_score
@@ -218,18 +226,18 @@ class Stockalyzer:
         oe_score = 0
 
         # Gross margin
-        gp = self.income_statement[self.years[0]]['grossProfit']
-        gp_last = self.income_statement[self.years[1]]['grossProfit']
-        revenue = self.income_statement[self.years[0]]['totalRevenue']
-        revenue_last = self.income_statement[self.years[1]]['totalRevenue']
+        gp = self.income_statement['grossProfit'].loc[self.years[0]]
+        gp_last = self.income_statement['grossProfit'].loc[self.years[1]]
+        revenue = self.income_statement['revenue'].loc[self.years[0]]
+        revenue_last = self.income_statement['revenue'].loc[self.years[1]]
         gm = gp / revenue
         gm_last = gp_last / revenue_last
         gm_score = 1 if gm > gm_last else 0
         oe_score += gm_score
 
         # Asset turnover
-        avg_assets = (self.balance_sheet[self.years[0]]['totalAssets'] + self.balance_sheet[self.years[1]]['totalAssets']) / 2
-        avg_assets_last = (self.balance_sheet[self.years[1]]['totalAssets'] + self.balance_sheet[self.years[2]]['totalAssets']) / 2
+        avg_assets = (self.balance_sheet['totalAssets'].loc[self.years[0]] + self.balance_sheet['totalAssets'].loc[self.years[1]]) / 2
+        avg_assets_last = (self.balance_sheet['totalAssets'].loc[self.years[1]] + self.balance_sheet['totalAssets'].loc[self.years[2]]) / 2
         at = revenue / avg_assets
         at_last = revenue_last / avg_assets_last
         at_score = 1 if at > at_last else 0

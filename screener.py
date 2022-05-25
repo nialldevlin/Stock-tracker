@@ -18,7 +18,7 @@ class Screener:
     def getData(self):
         logging.info('Evaluating stock list')
         list = self.list
-        indx = ['Symbol', 'Analysis', 'Price', 'Stop', 'Sell', 'Score']
+        indx = ['Symbol', 'Analysis', 'Price', 'ADR', 'Score']
         s_list = []
         i = 0
         l = len(list)
@@ -28,8 +28,7 @@ class Screener:
                 s = pd.Series([ticker,
                                sto.get_analysis(),
                                sto.getPrice(),
-                               sto.getStopPrice(),
-                               sto.getSellPrice(),
+                               sto.getADR(),
                                sto.get_score()], index=indx)
                 i += 1
                 logging.info('{}/{}: {} at {}, {}'.format(i, l, s['Symbol'], s['Price'], s['Analysis']))
