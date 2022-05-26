@@ -1,2 +1,5 @@
 stracker/
 __pycache__/
+apikey.txt
+.env
+key.key

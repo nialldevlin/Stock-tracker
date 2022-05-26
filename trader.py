@@ -2,7 +2,6 @@
 import pandas as pd
 from stock_analyzer import  Stockalyzer
 import alpaca_trade_api as tradeapi
-from screener import Screener
 import sqlite3
 import re
 from dotenv import load_dotenv
