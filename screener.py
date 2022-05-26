@@ -75,7 +75,7 @@ class Screener:
                     print(msg)
         
         df = pd.concat(s_list, axis=1).T
-        df.to_sql('stockdb', con=self.conn, if_exists='replace')
+        df.to_sql('stockdb', con=conn, if_exists='replace')
         print('100% Total in list: {}'.format(len(df.index)))
         return df
 

@@ -274,7 +274,7 @@ class Stockalyzer:
             return 'Buy'
         elif (rsi < 50 and
               stoch < 50 and
-              macd and
+              not macd and
               not up):
             return 'Sell'
         else:
