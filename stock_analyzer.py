@@ -21,7 +21,7 @@ class Stockalyzer:
         elif interval == tradeapi.TimeFrame.Hour:
             self.tpm = 14
             
-        with open("config.json", "r") as f:
+        with open("/var/www/html/config.json", "r") as f:
             self.params = json.load(f)
 
         self.stock = symbol
