@@ -3,6 +3,7 @@ import alpaca_trade_api as tradeapi
 from datetime import datetime, timedelta
 import yahoo_fin.stock_info as yf
 from dotenv import load_dotenv
+import json
 import os
 
 class Stockalyzer:
@@ -13,45 +14,20 @@ class Stockalyzer:
                 interval='daily'
         '''
         load_dotenv()
-
+        
+        # Time period multiplier - number of bars in a day
         if interval == tradeapi.TimeFrame.Day:
             self.tpm = 1
         elif interval == tradeapi.TimeFrame.Hour:
-            self.tpm = 16
-
-        self.params = {
-            'RSI': {
-                'interval': interval,
-                'time_period': 7 * self.tpm,
-                'series_type': 'close'
-            },
-            'STOCH': {
-                'interval': interval,
-                'fastkperiod': 14 * self.tpm,
-                'slowkperiod': 3 * self.tpm,
-                'slowdperiod': 3 * self.tpm
-            },
-            'MACDEXT': {
-                'interval': interval,
-                'series_type': 'close',
-                'fastperiod': 12 * self.tpm,
-                'slowperiod': 26 * self.tpm,
-                'signalperiod': 9 * self.tpm,
-                'fastmatype': 1,
-                'slowmatype': 1,
-                'signalmatype': 1
-            },
-            'ATR': {
-                'interval': interval,
-                'time_period': 7 * self.tpm
-            }
-        }
+            self.tpm = 14
+            
+        with open("config.json", "r") as f:
+            self.params = json.load(f)
 
         self.stock = symbol
-        live_trading = 'https://api.alpaca.markets'
-        paper_trading = 'https://paper-api.alpaca.markets'
-        # Be sure to change keys in .env file as well
-        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), paper_trading)
+        
+        # Be sure to change keys in .env file if changing from paper/live
+        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), self.params['paper_trading_endpoint'])
         self.account = self.api.get_account()
         self.interval = interval
         self.analysis = ''
@@ -72,8 +48,8 @@ class Stockalyzer:
         self.price = self.getPrice()
         self.stop = self.price - self.adr
         self.sell = self.price + self.adr * 2
-        self.avg_50 = self.price_data['close'].tail(50).mean()
-        self.avg_200 = self.price_data['close'].tail(200).mean()
+        self.avg_50 = self.price_data['close'].tail(50 * self.tpm).mean()
+        self.avg_200 = self.price_data['close'].tail(200 * self.tpm).mean()
 
         self.balance_sheet = yf.get_balance_sheet(self.stock)
         self.income_statement = yf.get_income_statement(self.stock)
@@ -81,12 +57,13 @@ class Stockalyzer:
         self.years = self.balance_sheet.columns
 
     def getPriceData(self, start, end, interval):
-        return self.api.get_bars(self.stock, interval, start, end, adjustment='raw').df
+        df = self.api.get_bars(self.stock, self.interval, start, end, adjustment='raw').df
+        return df
 
     def getRSIData(self):
         # Relative Strength Indicator
-        rsi_period = 7
-        change = self.price_data['close'].tail(rsi_period * 3).diff()
+        rsi_period = self.params['technical_params']['RSI']['period'] * self.tpm
+        change = self.price_data['close'].tail(rsi_period * 2).diff()
         up = change.clip(lower=0)
         down = -1 * change.clip(upper=0)
         avgu = up.ewm(span=rsi_period, adjust=False).mean()
@@ -97,30 +74,30 @@ class Stockalyzer:
 
     def getStochData(self):
         # Stochastic oscillator
-        data = self.price_data.tail(30)
-        low_d = data['low'].transform(lambda x: x.rolling(window=3).min())
-        high_d = data['high'].transform(lambda x: x.rolling(window=3).max())
-        low_k = data['low'].transform(lambda x: x.rolling(window=14).min())
-        high_k = data['high'].transform(lambda x: x.rolling(window=14).max())
+        data = self.price_data.tail(self.params['technical_params']['STOCH']['slow'] * self.tpm * 2)
+        low_d = data['low'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['fast'] * self. tpm)).min())
+        high_d = data['high'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['fast'] * self. tpm)).max())
+        low_k = data['low'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['slow'] * self. tpm)).min())
+        high_k = data['high'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['slow'] * self. tpm)).max())
 
         stochd = ((data['close'] - low_d) / (high_d - low_d)) * 100
         stochk = ((data['close'] - low_k) / (high_k - low_k)) * 100
-        stochd = stochd.rolling(window = 3).mean()
-        stochk = stochk.rolling(window = 14).mean()
+        stochd = stochd.rolling(window = (self.params['technical_params']['STOCH']['fast'] * self. tpm)).mean()
+        stochk = stochk.rolling(window = (self.params['technical_params']['STOCH']['slow'] * self. tpm)).mean()
         return stochk, stochd
 
     def getMACDData(self):
         # Moving Average Convergence Divergence
-        data = self.price_data.tail(30)
-        sema = data['close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
-        lema = data['close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+        data = self.price_data.tail(self.params['technical_params']['MACD']['slow'] * self.tpm * 2)
+        sema = data['close'].transform(lambda x: x.ewm(span=(self.params['technical_params']['MACD']['fast'] * self.tpm), adjust=False).mean())
+        lema = data['close'].transform(lambda x: x.ewm(span=(self.params['technical_params']['MACD']['slow'] * self.tpm), adjust=False).mean())
         macd = sema - lema
-        sig = macd.transform(lambda x: x.ewm(span=9, adjust=False).mean())
+        sig = macd.transform(lambda x: x.ewm(span=(self.params['technical_params']['MACD']['signal'] * self.tpm), adjust=False).mean())
         return macd, sig
 
     def getADR(self):
         # Average Daily Range
-        l = 7 * self.tpm
+        l = self.params['technical_params']['ADR']['period'] * self.tpm
         last_week = self.price_data.tail(l)
         daily_ranges = np.array([])
         for i in range(0, l, self.tpm):
@@ -133,7 +110,7 @@ class Stockalyzer:
         return adr
 
     def getPrice(self):
-        return self.price_data['close'].iloc[-1]- self.adr/4
+        return self.price_data['close'].iloc[-1]
 
     def getRSI(self):
         return self.rsi_data[-1]

@@ -1,0 +1,24 @@
+{
+	"db_file":"/var/www/html/db/stockdb.sqlite",
+	"live_trading_endpoint":"https://api.alpaca.markets",
+	"paper_trading_endpoint":"https://paper-api.alpaca.markets",
+	"technical_params": {
+		"RSI": {
+			"period":7
+		},
+		"STOCH": {
+			"slow":14,
+			"fast":3
+		},
+		"MACD": {
+			"slow":26,
+			"fast":12,
+			"signal":9
+		},
+		"ADR": {
+			"period":7
+		}
+	}
+}
+		
+	
