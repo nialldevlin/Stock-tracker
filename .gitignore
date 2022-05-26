@@ -3,3 +3,4 @@ __pycache__/
 apikey.txt
 .env
 key.key
+update.sh
