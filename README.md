@@ -12,6 +12,7 @@ Uses a combination of technical indicators to determine which stocks in the S&P 
 - alpaca-trade-api
 - yahoo-fin
 - SQLite3
+- dotenv
 
 ## Instructions for install on linux, or windows subsytem for linux
 - Clone git repo
@@ -33,8 +34,21 @@ cd Stock-tracker
 
 ```
 source stracker/bin/activate
-pip install numpy pandas yahoo-fin alpaca-trade-api SQLAlchemy
+pip install numpy pandas yahoo-fin alpaca-trade-api SQLAlchemy python-dotenv
 deactivate
+```
+
+- This project uses the dotenv library for environmental variables. Simply create a file named '.env' in the project directory with your API keys. Mine looks like this. The only thing that must match is the key names. Simply comment/uncomment the appropriate lines for paper or live trading.
+
+```
+# Paper trading keys
+APCA_API_SECRET_KEY="sample_secret_key"
+APCA_API_KEY_ID="sample_public_key"
+APCA_ENDPOINT="https://paper-api.alpaca.markets"
+# Live trading keys
+# APCA_API_SECRET_KEY="sample_secret_key"
+# APCA_API_KEY_ID="sample_public_key"
+# APCA_ENDPOINT="https://api.alpaca.markets"
 ```
 
 - Add permissions and run
