@@ -22,7 +22,7 @@ class Stockalyzer:
             self.tpm = 14
             
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        config = dir_path + "config.json"
+        config = dir_path + "/config.json"
         with open(config, "r") as f:
             self.params = json.load(f)
 

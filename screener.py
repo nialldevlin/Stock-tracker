@@ -10,7 +10,7 @@ class Screener:
     def __init__(self, verbose=False):
         self.verbose = verbose
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        config = dir_path + "config.json"
+        config = dir_path + "/config.json"
         print(config)
         with open(config, "r") as f:
             self.params = json.load(f)

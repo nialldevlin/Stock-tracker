@@ -13,7 +13,7 @@ class Trader:
     def __init__(self, buy_list=pd.DataFrame({})):
         load_dotenv()
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        config = dir_path + "config.json"
+        config = dir_path + "/config.json"
         with open(config, "r") as f:
             self.params = json.load(f)
         logging.basicConfig(filename=self.params['trader_log'],
