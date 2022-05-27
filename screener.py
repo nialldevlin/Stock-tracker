@@ -5,6 +5,7 @@ from stock_analyzer import Stockalyzer
 import logging
 import sqlite3
 import os
+import json
 
 class Screener:
     def __init__(self, verbose=False):

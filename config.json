@@ -1,5 +1,5 @@
 {
-	"db_file":"/var/www/html/db/stockdb.sqlite",
+	"db_file":"/var/www/html/stockdb.sqlite",
 	"trader_log":"/var/www/html/log/trader.log",
 	"screener_log":"/var/www/html/log/screener.log",
 	"technical_params": {

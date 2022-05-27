@@ -71,10 +71,10 @@ class Trader:
                 buy_price = round(s.getPrice(), 2)
                 tp_price = round(buy_price + adr * 2, 2)
                 stop_price = round(buy_price - adr, 2)
-                logging.info('Buying:')
                 buy_amount = buying_power * fraction
                 
                 if buy_amount > 0.1:
+                    logging.info('Buying {} of:'.format(buy_amount))
                     logging.info(stock)
                     
                     self.api.submit_order(stock['Symbol'],
