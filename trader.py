@@ -39,6 +39,7 @@ class Trader:
         for pos in self.positions:
             symbol = pos.symbol.strip()
             s = Stockalyzer(symbol)
+            logging.info("Current Positions")
             logging.info('{}: {}'.format(symbol, s.get_analysis()))
             if s.get_analysis() != 'Buy':
                 orders = self.api.list_orders()
