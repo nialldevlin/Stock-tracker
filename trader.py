@@ -71,12 +71,14 @@ class Trader:
                 stop_price = round(buy_price - adr, 2)
                 logging.info('Buying:')
                 buy_amount = buying_power * fraction
-                logging.info(stock)
                 
-                self.api.submit_order(stock['Symbol'],
-                                      notional=buy_amount,
-                                      side='buy',
-                                      type='market',
-                                      time_in_force='day')
+                if buy_amount > 0.1:
+                    logging.info(stock)
+                    
+                    self.api.submit_order(stock['Symbol'],
+                                          notional=buy_amount,
+                                          side='buy',
+                                          type='market',
+                                          time_in_force='day')
     
         return orders
