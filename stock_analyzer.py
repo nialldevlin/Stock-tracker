@@ -21,13 +21,15 @@ class Stockalyzer:
         elif interval == tradeapi.TimeFrame.Hour:
             self.tpm = 14
             
-        with open("/var/www/html/config.json", "r") as f:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        config = dir_path + "config.json"
+        with open(config, "r") as f:
             self.params = json.load(f)
 
         self.stock = symbol
         
         # Be sure to change keys in .env file if changing from paper/live
-        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), self.params['live_trading_endpoint'])
+        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), os.getenv('APCA_ENDPOINT'))
         self.account = self.api.get_account()
         self.interval = interval
         self.analysis = ''

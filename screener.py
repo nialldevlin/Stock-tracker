@@ -4,10 +4,16 @@ import pandas as pd
 from stock_analyzer import Stockalyzer
 import logging
 import sqlite3
+import os
 
 class Screener:
     def __init__(self, verbose=False):
         self.verbose = verbose
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        config = dir_path + "config.json"
+        print(config)
+        with open(config, "r") as f:
+            self.params = json.load(f)
         logging.basicConfig(filename=self.params['screener_log'],
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,

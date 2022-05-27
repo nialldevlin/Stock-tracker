@@ -12,14 +12,16 @@ import json
 class Trader:
     def __init__(self, buy_list=pd.DataFrame({})):
         load_dotenv()
-        with open("/var/www/html/config.json", "r") as f:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        config = dir_path + "config.json"
+        with open(config, "r") as f:
             self.params = json.load(f)
         logging.basicConfig(filename=self.params['trader_log'],
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
                             datefmt='%Y-%m-%d %H:%M:%S')
         
-        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), self.params['live_trading_endpoint'])
+        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), os.getenv('APCA_ENDPOINT'))
         self.account = self.api.get_account()
         self.positions = self.api.list_positions()
         
