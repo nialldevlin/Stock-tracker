@@ -10,7 +10,7 @@ import logging
 import json
 
 class Trader:
-    def __init__(self, buy_list=None):
+    def __init__(self, buy_list=pd.DataFrame({})):
         logging.basicConfig(filename='/var/www/html/log/trader.log',
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
@@ -23,7 +23,7 @@ class Trader:
         self.account = self.api.get_account()
         self.positions = self.api.list_positions()
         
-        if buy_list != None:
+        if not buy_list.empty:
             self.buy_list = buy_list
         else:
             db = r"/var/www/html/stockdb.sqlite"
@@ -64,7 +64,7 @@ class Trader:
             s = Stockalyzer(self.buy_list.iloc[i]['Symbol'])
             analysis = s.get_analysis()
             if analysis == 'Buy':
-                orders.append(stock['Price'])
+                orders.append([stock['Symbol'], stock['Price']])
                 adr = stock['ADR']
                 buy_price = round(s.getPrice(), 2)
                 tp_price = round(buy_price + adr * 2, 2)
