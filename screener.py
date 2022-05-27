@@ -8,11 +8,11 @@ import sqlite3
 class Screener:
     def __init__(self, verbose=False):
         self.verbose = verbose
-        logging.basicConfig(filename='/var/www/html/log/screener.log',
+        logging.basicConfig(filename=self.params['screener_log'],
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             level=logging.INFO,
                             datefmt='%Y-%m-%d %H:%M:%S')
-        self.conn = sqlite3.connect("/var/www/html/stockdb.sqlite")
+        self.conn = sqlite3.connect(self.params['db_file'])
         msg = 'Getting stock list'
         logging.info(msg)
         if verbose:

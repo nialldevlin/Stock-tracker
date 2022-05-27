@@ -11,13 +11,13 @@ import json
 
 class Trader:
     def __init__(self, buy_list=pd.DataFrame({})):
-        logging.basicConfig(filename='/var/www/html/log/trader.log',
-                            format='%(asctime)s %(levelname)-8s %(message)s',
-                            level=logging.INFO,
-                            datefmt='%Y-%m-%d %H:%M:%S')
         load_dotenv()
         with open("/var/www/html/config.json", "r") as f:
             self.params = json.load(f)
+        logging.basicConfig(filename=self.params['trader_log'],
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            level=logging.INFO,
+                            datefmt='%Y-%m-%d %H:%M:%S')
         
         self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), self.params['live_trading_endpoint'])
         self.account = self.api.get_account()
@@ -26,7 +26,7 @@ class Trader:
         if not buy_list.empty:
             self.buy_list = buy_list
         else:
-            db = r"/var/www/html/stockdb.sqlite"
+            db = self.params['db_file']
             conn = sqlite3.connect(db)
             df = pd.read_sql('SELECT * FROM stockdb', conn)
             self.buy_list = df.loc[df['Analysis'] == 'Buy']
