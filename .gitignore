@@ -4,3 +4,4 @@ apikey.txt
 .env
 key.key
 update.sh
+update_paper.sh
