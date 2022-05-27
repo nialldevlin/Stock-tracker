@@ -2,6 +2,9 @@
 ## Technical analysis based stock screener and trader
 <p>
 Uses a combination of technical indicators to determine which stocks in the S&P 500 are profitable, finds the best stock, and places a trade with the Alpaca trade api (https://alpaca.markets/). It also monitors current positions and determines when to sell. Meant to be run hourly or daily from a server.
+
+WARNING:
+THIS PROGRAM DOES NOT CONSTITUTE INVESTMENT ADVICE AND THE CREATOR OF THIS PROJECT IS NOT RESPONSIBLE FOR ANY MONETARY GAIN OR LOSS FROM THE USE OF THIS REPOSITORY- SEE LICENSE FOR MORE INFORMATION
 </p>
 
 ### Dependencies
