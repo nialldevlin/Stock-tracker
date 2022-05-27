@@ -27,7 +27,7 @@ class Stockalyzer:
         self.stock = symbol
         
         # Be sure to change keys in .env file if changing from paper/live
-        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), self.params['paper_trading_endpoint'])
+        self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), self.params['live_trading_endpoint'])
         self.account = self.api.get_account()
         self.interval = interval
         self.analysis = ''
