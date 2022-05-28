@@ -27,7 +27,7 @@ cd Stock-tracker
 
 - Install virtualenv
 
-```pip install virtualenv```
+```sudo apt install python3-venv```
 
 - Create new virtal environment
 
@@ -57,9 +57,8 @@ APCA_ENDPOINT="https://paper-api.alpaca.markets"
 - Add permissions and run
 
 ```
-chmod 777 stock_tracker.py
-chmod 777 stock_analyzer.py
-./stock_tracker.py
+chmod 777 main.py
+./main.py
 ```
 
 
