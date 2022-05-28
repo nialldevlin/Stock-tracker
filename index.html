@@ -6,25 +6,32 @@
 	<title>S&P 500 Stock Tracker</title>
 	<meta name="description" content="S&P Stock Tracker">
 	<meta name="keywords" content="stock S&P finance analysis">
+	<link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-	<h1>S&P 500 Stocks and Analysis</h1>
-	<p>Refreshes daily</p>
-	<h2>Filters</h2>
+	<header>
+		<div id="header">
+		<h1>S&P 500 Stocks and Analysis</h1>
+		<p>Refreshes daily</p>
+		<h2>Filters</h2>
+		</div>
+	</header>
 	<div id="filters">
-		<label for="analysis">Analysis:</label>
 		<form action="index.php" method="GET">
-			<select name="analysis" id="analysis">
+			<span class='label'>Analysis:</span> <select name="analysis" id="analysis">
 				<option value="All">All</option>
 				<option value="Buy">Buy</option>
 				<option value="Hold">Hold</option>
 				<option value="Sell">Sell</option>
-			</select>
-			Symbol: <input type="text" name="Symbol" id="Symbol" maxlength="4" size="5"> <br>
-			Min Price: <input type="number" name="min-price" id="min-price" min="0" max="10000" step="1" value="0"> <br>
-			Max Price: <input type="number" name="max-price" id="max-price" min="0" max="10000" step="1" value="10000"> <br>
-			<input type="submit" value="Submit" /> <input type="reset">
+			</select> <br>
+			<span class='label'>Symbol:</span>
+			<input type="text" name="Symbol" id="Symbol" maxlength="4" size="5"> <br>
+			<span class='label'>Min Price:</span>
+			<input type="number" name="min-price" id="min-price" min="0" max="10000" step="1" value="0" size="6"> <br>
+			<span class='label'>Max Price:</span>
+			<input class="button" type="number" name="max-price" id="max-price" min="0" max="10000" step="1" value="10000" size="6"> <br>
+			<input class="button" type="submit" value="Submit" /> <input type="reset">
 		</form>
 	</div>
 </body>

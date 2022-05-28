@@ -1,4 +1,7 @@
 <html>
+<head>
+<link rel="stylesheet" href="styles.css">
+</head>
 <body>
 
 <?php
@@ -8,15 +11,16 @@ $lastModifiedDatetime = date("d M Y H:i:s", $lastModifiedTimestamp);
 
 $SQLC = new SQLiteConnection();
 $pdo = $SQLC->connect();
+
+echo "<div>";
 if ($pdo != null)
-    echo 'Connected to the SQLite database successfully!';
+    echo '<p>Connected to the database</p>';
 else
-    echo 'Whoops, could not connect to the SQLite database!';
+    echo '<p>Whoops, could not connect to the SQLite database!</p>';
 
 echo "<br>";
 echo "<a href='index.html'>Return</a>";
 echo "<br>";
-echo "Results: <br>";
 
 $symbol = $_GET["Symbol"];
 $min_price = $_GET["min-price"];
@@ -24,8 +28,10 @@ $max_price = $_GET["max-price"];
 $analysis = $_GET["analysis"];
 $stock_data = $SQLC->getStockData($symbol, $min_price, $max_price, $analysis);
 
-echo "Last Updated: ";
+echo "<p>Last Updated: ";
 echo $lastModifiedDatetime;
+echo "</p>";
+echo "</div>";
 
 $firstRow = true;
 echo '<div class="table-responsive"><table class="table">';
@@ -42,7 +48,11 @@ foreach ($stock_data as $row) {
 
     echo '<tr>';
     foreach ($row as $value) {
-        echo '<td>'.$value.'</td>';
+		if (is_numeric($value)) {
+			echo '<td>'.round($value, 2).'</td>';
+		} else {
+			echo '<td>'.$value.'</td>';
+		}
     }
     echo '</tr>';
 }

@@ -66,7 +66,6 @@ class SQLiteConnection {
 		}
 		$result = $this->pdo->prepare($query);
 		try {
-		
      		$result->execute();
 		}
 		Catch(PDOException $e)
@@ -77,13 +76,8 @@ class SQLiteConnection {
 		$result = $this->pdo->query($query);
 		$data = [];
 		while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
-			$data[] = [
-				"Symbol" => $row["Symbol"],
-				"Price" => $row["Price"],
-				"Analysis" => $row["Analysis"],
-			];
+			$data[] = array_slice($row, 1);
 		}
-		
 		return $data;
 	}
 }
