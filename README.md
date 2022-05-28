@@ -27,7 +27,7 @@ cd Stock-tracker
 
 - Install virtualenv
 
-```pip install virtualenv```
+```sudo apt install python3-venv```
 
 - Create new virtal environment
 
