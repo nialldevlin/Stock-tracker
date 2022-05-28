@@ -66,7 +66,7 @@ class Screener:
                                    sto.getPrice(),
                                    sto.getADR(),
                                    sto.get_score()], index=indx)
-                    #self.seriesToDB(s)
+                    self.seriesToDB(s)
                     s_list.append(s)
                     
                     i += 1
@@ -82,7 +82,7 @@ class Screener:
                     print(msg)
         
         df = pd.concat(s_list, axis=1).T
-        df.to_sql('stockdb', con=self.conn, if_exists='replace')
+        #df.to_sql('stockdb', con=self.conn, if_exists='replace')
         print('100% Total in list: {}'.format(len(df.index)))
         return df
 
