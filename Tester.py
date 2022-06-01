@@ -10,5 +10,6 @@ if __name__ == '__main__':
     df = pd.read_sql('SELECT * FROM stockdb', conn)
     buy_list = df.loc[df['Analysis'] == 'Buy']
     trader = Trader(buy_list)
-    print(trader.evalPositions())
-    print(trader.buyPositions())
+    p = trader.evalPositions()
+    print(p)
+    print(trader.buyPositions(p))

@@ -7,5 +7,5 @@ import logging
 if __name__ == '__main__':
     s = Screener(True)
     trader = Trader(s.buy)
-    trader.evalPositions()
-    trader.buyPositions()
+    p = trader.evalPositions()
+    trader.buyPositions(p)

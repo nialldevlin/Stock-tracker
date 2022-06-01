@@ -19,7 +19,7 @@ class Stockalyzer:
         if interval == tradeapi.TimeFrame.Day:
             self.tpm = 1
         elif interval == tradeapi.TimeFrame.Hour:
-            self.tpm = 14
+            self.tpm = 1
             
         dir_path = os.path.dirname(os.path.realpath(__file__))
         config = dir_path + "/config.json"
@@ -32,7 +32,6 @@ class Stockalyzer:
         self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), os.getenv('APCA_ENDPOINT'))
         self.account = self.api.get_account()
         self.interval = interval
-        self.analysis = ''
 
         start = datetime.today().strftime('%Y-%m-%d')
         end = (datetime.today() - timedelta(200)).strftime('%Y-%m-%d')
@@ -57,6 +56,9 @@ class Stockalyzer:
         self.income_statement = yf.get_income_statement(self.stock)
         self.cfs = yf.get_cash_flow(self.stock)
         self.years = self.balance_sheet.columns
+        
+        self.score = self.get_score()
+        self.analysis = self.get_analysis()
 
     def getPriceData(self, start, end, interval):
         df = self.api.get_bars(self.stock, self.interval, start, end, adjustment='raw').df

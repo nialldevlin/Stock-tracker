@@ -27,13 +27,40 @@ class Screener:
         self.data = self.getData()
         self.buy = self.getBuy()
     
-    def createDBTable(self, columns):
+    def createDatabase(self, columns):
+        c = self.conn.cursor()
         sql = "CREATE TABLE IF NOT EXISTS stockdb ("
         sql += columns[0]
         sql += " PRIMARY KEY, "
         sql += ", ".join(columns[1:])
         sql += ')'
-        c = self.conn.cursor()
+        
+        c.execute(sql)
+        sql =   """CREATE TABLE IF NOT EXISTS modifications (
+                    table_name TEXT NOT NULL PRIMARY KEY ON CONFLICT REPLACE,
+                    action TEXT NOT NULL,
+                    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );"""
+        c.execute(sql)
+        
+        sql =   """CREATE TRIGGER IF NOT EXISTS table1_ondelete AFTER DELETE ON stockdb
+                BEGIN
+                    INSERT INTO modifications (table_name, action) VALUES ('stockdb','DELETE');
+                END;"""
+        c.execute(sql)
+        
+        c.execute(sql)
+
+        sql =   """CREATE TRIGGER IF NOT EXISTS table1_onupdate AFTER UPDATE ON stockdb
+                BEGIN
+                    INSERT INTO modifications (table_name, action) VALUES ('stockdb','UPDATE');
+                END;"""
+        c.execute(sql)
+
+        sql =   """CREATE TRIGGER IF NOT EXISTS table1_oninsert AFTER INSERT ON stockdb
+                BEGIN
+                    INSERT INTO modifications (table_name, action) VALUES ('stockdb','INSERT');
+                END;"""
         c.execute(sql)
     
     def seriesToDB(self, series):
@@ -51,8 +78,8 @@ class Screener:
         if self.verbose:
             print(msg)
         list = self.list
-        indx = ['Symbol', 'Analysis', 'Price', 'ADR', 'Score']
-        self.createDBTable(indx)
+        indx = ['Symbol', 'Analysis', 'Price', 'ADR', 'Score', 'RSI', 'MACD', 'MACD_SIG', 'STOCH']
+        self.createDatabase(indx)
         s_list = []
         i = 0
         l = len(list)
@@ -60,12 +87,17 @@ class Screener:
             try:
                 sto = Stockalyzer(ticker)
                 if sto.getPrice() < 250:
-                    s = pd.Series([ticker,
-                                   sto.get_analysis(),
-                                   sto.getPrice(),
-                                   sto.getADR(),
-                                   sto.get_score()], index=indx)
-                    self.seriesToDB(s)
+                    row = [ticker,
+                        sto.analysis,
+                        round(sto.price, 2),
+                        round(sto.adr, 2),
+                        sto.score,
+                        round(sto.rsi, 2),
+                        round(sto.macd, 2),
+                        round(sto.macd_sig, 2),
+                        round(sto.stochk, 2)]
+                    s = pd.Series(row, index=indx)
+                    #self.seriesToDB(s)
                     s_list.append(s)
                     
                     i += 1
@@ -81,7 +113,7 @@ class Screener:
                     print(msg)
         
         df = pd.concat(s_list, axis=1).T
-        #df.to_sql('stockdb', con=self.conn, if_exists='replace')
+        df.to_sql('stockdb', con=self.conn, if_exists='replace')
         print('100% Total in list: {}'.format(len(df.index)))
         return df
 

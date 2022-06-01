@@ -35,7 +35,7 @@ class Trader:
         self.buy_list = self.buy_list.loc[self.buy_list['Score'] == 8].sort_values(by=['Price'])
 
     def evalPositions(self):
-        orders = []
+        positions = []
         for pos in self.positions:
             symbol = pos.symbol.strip()
             s = Stockalyzer(symbol)
@@ -48,40 +48,43 @@ class Trader:
                         self.api.cancel_order(order.id)
                 self.api.submit_order(symbol, qty=pos.qty, side='sell', type='market')
                 logging.info('Sold {}'.format(symbol))
-                orders.append(symbol)
-        return orders
+        
+        for pos in self.api.list_positions():
+            positions.append(pos.symbol.strip())
+        return positions
 
-    def buyPositions(self):
+    def buyPositions(self, positions):
         buying_power = float(self.account.buying_power)
         
         if len(self.buy_list.index) == 0:
             logging.info('No stocks found to buy')
             return "No Stocks Found"
         
-        total = self.buy_list['Price'].sum()
         orders = []
+        total = 0
         
         for i in range(len(self.buy_list.index)):
             stock = self.buy_list.iloc[i]
-            fraction = stock['Price'] / total
-            s = Stockalyzer(self.buy_list.iloc[i]['Symbol'])
+            s = Stockalyzer(stock['Symbol'])
             analysis = s.get_analysis()
-            if analysis == 'Buy':
+            if analysis == 'Buy' and stock['Symbol'] not in positions:
                 orders.append([stock['Symbol'], stock['Price']])
-                adr = stock['ADR']
                 buy_price = round(s.getPrice(), 2)
-                tp_price = round(buy_price + adr * 2, 2)
-                stop_price = round(buy_price - adr, 2)
-                buy_amount = buying_power * fraction
                 
-                if buy_amount > 0.1:
-                    logging.info('Buying {} of:'.format(buy_amount))
-                    logging.info(stock)
-                    
-                    self.api.submit_order(stock['Symbol'],
-                                          notional=buy_amount,
-                                          side='buy',
-                                          type='market',
-                                          time_in_force='day')
-    
+                total += buy_price
+                orders.append([stock['Symbol'], buy_price])
+        
+        for order in orders:
+            buy_amount = (order[1] / total) * buying_power
+            try:
+                self.api.submit_order(order[0],
+                                      notional=buy_amount,
+                                      side='buy',
+                                      type='market',
+                                      time_in_force='day')
+                logging.info('Buying {} of: {}'.format(order[1], order[0]))
+            except Exception as ex:
+                logging.error(ex)
+                print(ex)
+
         return orders
