@@ -9,6 +9,19 @@ import os
 import logging
 import json
 
+def setup_logger(logger_name, log_file, level=logging.INFO):
+    l = logging.getLogger(logger_name)
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    fileHandler = logging.FileHandler(log_file, mode='w')
+    fileHandler.setFormatter(formatter)
+    streamHandler = logging.StreamHandler()
+    streamHandler.setFormatter(formatter)
+
+    l.setLevel(level)
+    l.addHandler(fileHandler)
+    l.addHandler(streamHandler)
+    return logging.getLogger(logger_name)
+
 class Trader:
     def __init__(self, buy_list=pd.DataFrame({})):
         load_dotenv()
@@ -16,10 +29,7 @@ class Trader:
         config = dir_path + "/config.json"
         with open(config, "r") as f:
             self.params = json.load(f)
-        logging.basicConfig(filename=self.params['trader_log'],
-                            format='%(asctime)s %(levelname)-8s %(message)s',
-                            level=logging.INFO,
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        self.log_t = setup_logger('trader', self.params['trader_log'])
         
         self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), os.getenv('APCA_ENDPOINT'))
         self.account = self.api.get_account()
@@ -36,18 +46,18 @@ class Trader:
 
     def evalPositions(self):
         positions = []
+        self.log_t.info("Current Positions")
         for pos in self.positions:
             symbol = pos.symbol.strip()
             s = Stockalyzer(symbol)
-            logging.info("Current Positions")
-            logging.info('{}: {}'.format(symbol, s.get_analysis()))
+            self.log_t.info('{}: {}'.format(symbol, s.get_analysis()))
             if s.get_analysis() != 'Buy':
                 orders = self.api.list_orders()
                 for order in orders:
                     if order.symbol == symbol:
                         self.api.cancel_order(order.id)
                 self.api.submit_order(symbol, qty=pos.qty, side='sell', type='market')
-                logging.info('Sold {}'.format(symbol))
+                self.log_t.info('Sold {}'.format(symbol))
         
         for pos in self.api.list_positions():
             positions.append(pos.symbol.strip())
@@ -57,7 +67,7 @@ class Trader:
         buying_power = float(self.account.buying_power)
         
         if len(self.buy_list.index) == 0:
-            logging.info('No stocks found to buy')
+            self.log_t.info('No stocks found to buy')
             return "No Stocks Found"
         
         orders = []
@@ -68,7 +78,6 @@ class Trader:
             s = Stockalyzer(stock['Symbol'])
             analysis = s.get_analysis()
             if analysis == 'Buy' and stock['Symbol'] not in positions:
-                orders.append([stock['Symbol'], stock['Price']])
                 buy_price = round(s.getPrice(), 2)
                 
                 total += buy_price
@@ -82,9 +91,9 @@ class Trader:
                                       side='buy',
                                       type='market',
                                       time_in_force='day')
-                logging.info('Buying {} of: {}'.format(order[1], order[0]))
+                self.log_t.info('Buying {} of: {}'.format(order[1], order[0]))
             except Exception as ex:
-                logging.error(ex)
+                self.log_t.error(ex)
                 print(ex)
 
         return orders

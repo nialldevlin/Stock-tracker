@@ -7,6 +7,19 @@ import sqlite3
 import os
 import json
 
+def setup_logger(logger_name, log_file, level=logging.INFO):
+    l = logging.getLogger(logger_name)
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    fileHandler = logging.FileHandler(log_file, mode='w')
+    fileHandler.setFormatter(formatter)
+    streamHandler = logging.StreamHandler()
+    streamHandler.setFormatter(formatter)
+
+    l.setLevel(level)
+    l.addHandler(fileHandler)
+    l.addHandler(streamHandler)
+    return logging.getLogger(logger_name)
+
 class Screener:
     def __init__(self, verbose=False):
         self.verbose = verbose
@@ -14,13 +27,10 @@ class Screener:
         config = dir_path + "/config.json"
         with open(config, "r") as f:
             self.params = json.load(f)
-        logging.basicConfig(filename=self.params['screener_log'],
-                            format='%(asctime)s %(levelname)-8s %(message)s',
-                            level=logging.INFO,
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        self.log_s = setup_logger('screener', self.params['screener_log'])
         self.conn = sqlite3.connect(self.params['db_file'])
         msg = 'Getting stock list'
-        logging.info(msg)
+        self.log_s.info(msg)
         if verbose:
             print(msg)
         self.list = yf.tickers_sp500()
@@ -74,7 +84,7 @@ class Screener:
 
     def getData(self):
         msg = 'Evaluating stock list'
-        logging.info(msg)
+        self.log_s.info(msg)
         if self.verbose:
             print(msg)
         list = self.list
@@ -103,12 +113,12 @@ class Screener:
                     i += 1
                     percent_done = round((i / l) * 100, 2)
                     msg = '{}% {} at ${:.2f}, {}'.format(percent_done, s['Symbol'], s['Price'], s['Analysis'])
-                    logging.info(msg)
+                    self.log_s.info(msg)
                     if self.verbose:
                         print(msg)
             except Exception as ex:
                 msg = '{} {}'.format(ticker, ex)
-                logging.error(msg)
+                self.log_s.error(msg)
                 if self.verbose:
                     print(msg)
         
