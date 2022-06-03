@@ -9,7 +9,8 @@ if __name__ == '__main__':
     conn = sqlite3.connect(db)
     df = pd.read_sql('SELECT * FROM stockdb', conn)
     buy_list = df.loc[df['Analysis'] == 'Buy']
-    trader = Trader(buy_list)
+    sell_list = df.loc[df['Analysis'] == 'Sell']
+    trader = Trader(buy_list, sell_list)
     p = trader.evalPositions()
-    print(p)
+    print(trader.shortPositions(p))
     print(trader.buyPositions(p))

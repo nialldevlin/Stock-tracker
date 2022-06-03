@@ -6,6 +6,9 @@ import logging
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     s = Screener()
-    trader = Trader(s.buy)
+    trader = Trader(s.buy, s.sell)
     p = trader.evalPositions()
-    trader.buyPositions(p)
+    if s.buy_or_sell() == 'Buy':
+        trader.buyPositions(p)
+    else:
+        trader.shortPositions(p)

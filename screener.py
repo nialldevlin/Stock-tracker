@@ -36,6 +36,7 @@ class Screener:
         self.list = yf.tickers_sp500()
         self.data = self.getData()
         self.buy = self.getBuy()
+        self.sell = self.getSell()
     
     def createDatabase(self, columns):
         c = self.conn.cursor()
@@ -119,6 +120,7 @@ class Screener:
             except Exception as ex:
                 msg = '{} {}'.format(ticker, ex)
                 self.log_s.error(msg)
+                l -= 1
                 if self.verbose:
                     print(msg)
         
@@ -131,3 +133,14 @@ class Screener:
         data = self.data
         df = data.loc[data['Analysis'] == 'Buy']
         return df
+    
+    def getSell(self):
+        data = self.data
+        df = data.loc[data['Analysis'] == 'Sell']
+        return df
+    
+    def buy_or_sell(self):
+        if len(self.buy.index) > len(self.sell.index):
+            return 'Buy'
+        else:
+            return 'Sell'
