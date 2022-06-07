@@ -16,6 +16,7 @@ THIS PROGRAM DOES NOT CONSTITUTE INVESTMENT ADVICE AND THE CREATOR OF THIS PROJE
 - yahoo-fin
 - SQLite3
 - dotenv
+- TA
 
 ## Instructions for install on linux, or windows subsytem for linux
 - Clone git repo
@@ -37,7 +38,7 @@ cd Stock-tracker
 
 ```
 source stracker/bin/activate
-pip install numpy pandas yahoo-fin alpaca-trade-api SQLAlchemy python-dotenv
+pip install numpy pandas yahoo-fin alpaca-trade-api SQLAlchemy python-dotenv ta
 deactivate
 ```
 
