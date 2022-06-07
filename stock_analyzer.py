@@ -5,22 +5,19 @@ import yahoo_fin.stock_info as yf
 from dotenv import load_dotenv
 import json
 import os
+import ta
 
 class Stockalyzer:
-    def __init__(self, symbol, interval=tradeapi.TimeFrame.Hour, mode='store'):
+    def __init__(self, symbol, interval='day', mode='store'):
         '''
-        Class to analyze stocks. Also contains simulator to check algorithm
+        Class to analyze stocks using 3 tecnical indicators: Relative Strength Index (RSI)
+        Stochastic Oscillator, and Moving Average Convergence Divergence (MACD) and simple moving
+        average analysis. Also performs basic finance analysis of the company and assigns score
         Params: ticker - 4 letter stock name eg. 'MSFT'
                 interval='daily'
         '''
         load_dotenv()
         
-        # Time period multiplier - number of bars in a day
-        if interval == tradeapi.TimeFrame.Day:
-            self.tpm = 1
-        elif interval == tradeapi.TimeFrame.Hour:
-            self.tpm = 1
-            
         dir_path = os.path.dirname(os.path.realpath(__file__))
         config = dir_path + "/config.json"
         with open(config, "r") as f:
@@ -31,26 +28,35 @@ class Stockalyzer:
         # Be sure to change keys in .env file if changing from paper/live
         self.api = tradeapi.REST(os.getenv('APCA_API_KEY_ID'), os.getenv('APCA_API_SECRET_KEY'), os.getenv('APCA_ENDPOINT'))
         self.account = self.api.get_account()
-        self.interval = interval
+        
+        if interval == 'day':
+            self.interval = tradeapi.TimeFrame.Day
+        elif interval == 'hour':
+            self.interval = tradeapi.TimeFrame.Hour
+        else:
+            raise ValueError("Interval must be 'hour' or 'day'")
 
         start = datetime.today().strftime('%Y-%m-%d')
         end = (datetime.today() - timedelta(200)).strftime('%Y-%m-%d')
-        self.price_data = self.getPriceData(end, start, interval)
+        self.price_data = self.getPriceData(end, start)
+        
         if self.price_data.empty:
             raise AttributeError('No Price Data found for {}'.format(self.stock))
-        self.rsi_data = self.getRSIData()
-        self.stochk_data, self.stochd_data = self.getStochData()
-        self.macd_data, self.macd_sig_data = self.getMACDData()
-
-        self.rsi = self.getRSI()
-        self.stochk, self.stochd = self.getStoch()
-        self.macd, self.macd_sig = self.getMACD()
-        self.adr = self.getADR()
+        
         self.price = self.getPrice()
-        self.stop = self.price - self.adr
-        self.sell = self.price + self.adr * 2
-        self.avg_50 = self.price_data['close'].tail(50 * self.tpm).mean()
-        self.avg_200 = self.price_data['close'].tail(200 * self.tpm).mean()
+        self.adr = self.getADR()
+        self.avg_50 = self.price_data['close'].tail(50).mean()
+        self.avg_200 = self.price_data['close'].tail(200).mean()
+
+        self.rsi = ta.momentum.RSIIndicator(self.price_data['close'], 7).rsi()
+        
+        stochastic = ta.momentum.StochasticOscillator(self.price_data['high'], self.price_data['low'], self.price_data['close'])
+        self.stoch = stochastic.stoch()
+        self.stoch_sig = stochastic.stoch_signal()
+        
+        macd = ta.trend.MACD(self.price_data['close'])
+        self.macd = macd.macd()
+        self.macd_sig = macd.macd_signal()
 
         self.balance_sheet = yf.get_balance_sheet(self.stock)
         self.income_statement = yf.get_income_statement(self.stock)
@@ -60,76 +66,26 @@ class Stockalyzer:
         self.score = self.get_score()
         self.analysis = self.get_analysis()
 
-    def getPriceData(self, start, end, interval):
+    def getPriceData(self, start, end):
         df = self.api.get_bars(self.stock, self.interval, start, end, adjustment='raw').df
         return df
-
-    def getRSIData(self):
-        # Relative Strength Indicator
-        rsi_period = self.params['technical_params']['RSI']['period'] * self.tpm
-        change = self.price_data['close'].tail(rsi_period * 2).diff()
-        up = change.clip(lower=0)
-        down = -1 * change.clip(upper=0)
-        avgu = up.ewm(span=rsi_period, adjust=False).mean()
-        avgd = down.ewm(span=rsi_period, adjust=False).mean()
-        rs = avgu / avgd
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
-
-    def getStochData(self):
-        # Stochastic oscillator
-        data = self.price_data.tail(self.params['technical_params']['STOCH']['slow'] * self.tpm * 2)
-        low_d = data['low'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['fast'] * self. tpm)).min())
-        high_d = data['high'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['fast'] * self. tpm)).max())
-        low_k = data['low'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['slow'] * self. tpm)).min())
-        high_k = data['high'].transform(lambda x: x.rolling(window=(self.params['technical_params']['STOCH']['slow'] * self. tpm)).max())
-
-        stochd = ((data['close'] - low_d) / (high_d - low_d)) * 100
-        stochk = ((data['close'] - low_k) / (high_k - low_k)) * 100
-        stochd = stochd.rolling(window = (self.params['technical_params']['STOCH']['fast'] * self. tpm)).mean()
-        stochk = stochk.rolling(window = (self.params['technical_params']['STOCH']['slow'] * self. tpm)).mean()
-        return stochk, stochd
-
-    def getMACDData(self):
-        # Moving Average Convergence Divergence
-        data = self.price_data.tail(self.params['technical_params']['MACD']['slow'] * self.tpm * 2)
-        sema = data['close'].transform(lambda x: x.ewm(span=(self.params['technical_params']['MACD']['fast'] * self.tpm), adjust=False).mean())
-        lema = data['close'].transform(lambda x: x.ewm(span=(self.params['technical_params']['MACD']['slow'] * self.tpm), adjust=False).mean())
-        macd = sema - lema
-        sig = macd.transform(lambda x: x.ewm(span=(self.params['technical_params']['MACD']['signal'] * self.tpm), adjust=False).mean())
-        return macd, sig
-
-    def getADR(self):
-        # Average Daily Range
-        l = self.params['technical_params']['ADR']['period'] * self.tpm
-        last_week = self.price_data.tail(l)
-        daily_ranges = np.array([])
-        for i in range(0, l, self.tpm):
-            day = last_week.iloc[i:i+self.tpm]
-            daily_high = day['high'].max() 
-            daily_low = day['low'].min()
-            daily_ranges = np.append(daily_ranges, daily_high - daily_low)
-
-        adr = np.mean(daily_ranges)
-        return adr
-
+    
     def getPrice(self):
         return self.price_data['close'].iloc[-1]
 
-    def getRSI(self):
-        return self.rsi_data[-1]
-
-    def getStoch(self):
-        return self.stochk_data[-1], self.stochd_data[-1]
-
-    def getMACD(self):
-        return self.macd_data[-1], self.macd_sig_data[-1]
+    def getADR(self):
+        # Average Daily Range
+        data = self.price_data.tail(self.params['technical_params']['ADR']['period'])
+        
+        ranges = data['high'] - data['low']
+        
+        return ranges.mean()
 
     def getStopPrice(self):
-        return self.getPrice() - self.adr
+        return self.price - self.adr
 
     def getSellPrice(self):
-        return self.getPrice() + self.adr * 2
+        return self.price + self.adr * 2
 
     def profitability(self):
         """
@@ -232,29 +188,18 @@ class Stockalyzer:
         sell, or hold position. Estimated 9% gain
         Return: string 'Buy', 'Sell', or 'Hold'
         '''
-        if timestamp == 'now':
-            rsi = self.rsi
-            stoch = self.stochk
-            macd = self.macd > self.macd_sig
-            up = self.price > self.avg_50 and self.avg_50 > self.avg_200
-        else:
-            rsi = self.rsi_data.loc[timestamp]
-            stoch = self.stochk_data.loc[timestamp]
-            macd = self.macd_data.loc[timestamp] > self.macd_sig_data.loc[timestamp]
-            if timestamp in self.avg_200_data.index:
-                up = (self.price_data.loc[timestamp] > self.avg_50_data.loc[timestamp]
-                      and self.avg_50_data.loc[timestamp] > self.avg_200_data.loc[timestamp])
-            else:
-                up = True
+        rsi = self.rsi.iloc[-1] > 50
+        stoch = self.stoch.iloc[-1] > self.stoch_sig.iloc[-1]
+        macd = self.macd.iloc[-1] > self.macd_sig.iloc[-1]
+        up = self.price > self.avg_50 and self.avg_50 > self.avg_200
 
-        if (rsi > 50 and
-            stoch > 50 and
+        if (rsi and
+            stoch and
             macd and
-            up and
-            self.get_score() >= 7):
+            up):
             return 'Buy'
-        elif (rsi < 50 and
-              stoch < 50 and
+        elif (not rsi and
+              not stoch and
               not macd and
               not up):
             return 'Sell'

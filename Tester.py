@@ -12,5 +12,7 @@ if __name__ == '__main__':
     sell_list = df.loc[df['Analysis'] == 'Sell']
     trader = Trader(buy_list, sell_list)
     p = trader.evalPositions()
-    print(trader.shortPositions(p))
-    print(trader.buyPositions(p))
+    if len(buy_list.index) >= len(sell_list.index):
+        trader.buyPositions(p)
+    else:
+        trader.shortPositions(p)

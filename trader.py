@@ -62,23 +62,29 @@ class Trader:
             self.log_t.info('{}: {}'.format(symbol, s.get_analysis()))
             qty = float(pos.qty)
             if qty < 0:
-                if s.get_analysis() != 'Sell':
+                if s.analysis != 'Sell':
                     orders = self.api.list_orders()
                     for order in orders:
                         if order.symbol == symbol:
                             self.api.cancel_order(order.id)
-                    print(qty)
-                    self.api.submit_order(symbol, qty=-1*qty, side='buy', type='market')
-                    self.log_t.info('Bought {}'.format(symbol))
+                    try:
+                        self.api.submit_order(symbol, qty=-1*qty, side='buy', type='market')
+                        self.log_t.info('Closed: Bought {}'.format(symbol))
+                    except Exception as ex:
+                        print(ex)
+                        self.log_t.info('Not Closed: {}'.format(ex))
             else:
-                if s.get_analysis() != 'Buy':
+                if s.analysis != 'Buy':
                     orders = self.api.list_orders()
                     for order in orders:
                         if order.symbol == symbol:
                             self.api.cancel_order(order.id)
-                    print(pos.qty)
-                    self.api.submit_order(symbol, qty=pos.qty, side='sell', type='market')
-                    self.log_t.info('Bought {}'.format(symbol))
+                    try:
+                        self.api.submit_order(symbol, qty=pos.qty, side='sell', type='market')
+                        self.log_t.info('Closed: Sold {}'.format(symbol))
+                    except Exception as ex:
+                        print(ex)
+                        self.log_t.info('Not Closed: {}'.format(ex))
             
         for pos in self.api.list_positions():
             positions.append(pos.symbol.strip())
@@ -97,7 +103,7 @@ class Trader:
             stock = self.buy_list.iloc[i]
             s = Stockalyzer(stock['Symbol'])
             analysis = s.get_analysis()
-            if analysis == 'Buy' and stock['Symbol'] not in positions:
+            if analysis == 'Buy' and stock['Symbol'] not in positions and s.score == 8:
                 buy_price = round(s.getPrice(), 2)
                 total += buy_price
                 orders.append([stock['Symbol'], buy_price])
@@ -130,7 +136,7 @@ class Trader:
             self.sell_list = self.sell_list.iloc[:-1]
             
         if len(self.sell_list.index) == 0:
-            self.log_t.info('No stocks found to buy')
+            self.log_t.info('No stocks found to sell')
             return "No Stocks Found"
         
         buy_amount = int((buying_power / stock.price) * 0.95)
