@@ -24,6 +24,7 @@ class Trader:
     buyPositions(margin=0.9)
         Buys stocks with stop/limit order up to margin percent of buying power
     """
+    # TODO implement short sell
 
     def __init__(self, verbose=True):
         """Set up API, account, and get positions
