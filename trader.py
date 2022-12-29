@@ -5,8 +5,13 @@ from alpaca.trading.client import TradingClient
 from screener import Screener
 import pandas as pd
 from alpaca.trading.requests import MarketOrderRequest
-from alpaca.trading.enums import OrderSide, TimeInForce, OrderType
+from alpaca.trading.enums import OrderSide, TimeInForce, OrderType, OrderClass
 import warnings
+from enum import Enum
+
+class Side(Enum):
+    BUY = 0
+    SELL = 1
 
 class Trader:
     """
@@ -21,10 +26,9 @@ class Trader:
     evalPositions()
         Deprecated
 
-    buyPositions(margin=0.9)
-        Buys stocks with stop/limit order up to margin percent of buying power
+    tradePositions(margin=0.9)
+        Buys/sells stocks with stop/limit order up to margin percent of buying power
     """
-    # TODO implement short sell
 
     def __init__(self, verbose=True, live=True):
         """Set up API, account, get current positions, get screener data
@@ -38,11 +42,15 @@ class Trader:
         self.positions = self.api.get_all_positions()
 
         if live:
-            screener = Screener()
-            self.data = screener.getData()
+            self.screener = Screener()
+            self.data = self.screener.getData()
             self.data.to_csv('test_data.csv')
+            self.buy = self.screener.getBuy()
+            self.sell = self.screener.getSell()
         else:
             self.data = pd.read_csv('test_data.csv')
+            self.buy = self.data.loc[self.data['Analysis'] == 'Buy']
+            self.sell = self.data.loc[self.data['Analysis'] == 'Sell']
 
     def evalPositions(self):
         """Evaluate current positions. Deprecated
@@ -66,66 +74,24 @@ class Trader:
                 print(market_order)
         return orders
 
-    def buyPositions(self, margin=0.9):
-        """Buys stocks with stop/limit order up to margin percent of buying power
+    def tradePositions(self, margin=0.9, side=Side.BUY):
+        """Buys/Shorts stocks with stop/limit order up to margin percent of buying power
 
-        Buys equal dollar amount of each stock using Alpaca api based on technical indicator analysis
+        Loops through each stock list, trades 1 of each starting with cheapest until no more
+        buying power. Submits take profit and stop orders.
 
         :param margin: fraction of buying power to use as float from 0 to 1
         :return: Orders submitted
         """
-        buy_list = self.data[self.data['Analysis'] == 'Buy']
+        if side == Side.BUY:
+            buy_list = self.buy
+        elif side == Side.SELL:
+            buy_list = self.sell
+        else:
+            raise ValueError('side must be Side.BUY or Side.SELL')
 
         # best_stocks = buy_list.loc[buy_list['Score'] == buy_list['Score'].max()]
         best_stocks = buy_list
-
-        if self.v:
-            print('Best Stocks:')
-            print(best_stocks)
-
-        buying_power = float(self.account.buying_power) * margin
-        if self.v:
-            print('Buying Power: ', buying_power)
-
-        buy_amount = round(buying_power / len(best_stocks.index), 2)
-        if self.v:
-            print('Buy Amount: ', buy_amount)
-
-        orders = []
-        for index, stock in best_stocks.iterrows():
-            if self.v:
-                print('Current Stock:')
-                print(stock)
-
-            market_order_data = MarketOrderRequest(symbol=stock['Symbol'],
-                                                   notional=buy_amount,
-                                                   type=OrderType.STOP_LIMIT,
-                                                   side=OrderSide.BUY,
-                                                   limit_price=stock['Limit'],
-                                                   stop_price=stock['Stop'],
-                                                   time_in_force=TimeInForce.DAY)
-            market_order = self.api.submit_order(market_order_data)
-            orders.append(market_order)
-
-            if self.v:
-                print(market_order_data)
-        return orders
-
-    def shortPositions(self, margin=0.5, t_percent=0.05):
-        """Shorts stocks with stop/limit order up to margin percent of buying power
-
-                Loops through each stock list, shorts 1 of each starting with cheapest until no more
-                buying power
-
-                :param margin: fraction of buying power to use as float from 0 to 1
-                :param t_percent: trailing percent for trailing stop loss
-                :return: Orders submitted
-                """
-        short_list = self.data[self.data['Analysis'] == 'Sell']
-
-        short_list.sort_values('Price')
-        short_list.reset_index(drop=True)
-        best_stocks = short_list
 
         if self.v:
             print('Best Stocks:')
@@ -139,18 +105,30 @@ class Trader:
         cont_trade = True
         i = 0
         l = len(best_stocks.index)
-        total_shorted_cash_amount = 0
+        total_bought_cash_amount = 0
+
         while cont_trade:
             stock = best_stocks.iloc[i]
             if self.v:
                 print('Current Stock:')
                 print(i, ': ', stock)
             try:
+                if side == Side.BUY:
+                    stop = round(stock['Price'] - stock['ADR'], 2)
+                    limit = round(stock['Price'] + stock['ADR'] * 2, 2)
+                    o_side = OrderSide.BUY
+                else:
+                    stop = round(stock['Price'] + stock['ADR'], 2)
+                    limit = round(stock['Price'] - stock['ADR'] * 2, 2)
+                    o_side = OrderSide.SELL
+
                 market_order_data = MarketOrderRequest(symbol=stock['Symbol'],
                                                        qty=1,
-                                                       type=OrderType.TRAILING_STOP,
-                                                       side=OrderSide.SELL,
-                                                       trail_percent=t_percent,
+                                                       type=OrderType.MARKET,
+                                                       side=o_side,
+                                                       order_class=OrderClass.BRACKET,
+                                                       take_profit={'limit_price': limit},
+                                                       stop_loss={'stop_price': stop},
                                                        time_in_force=TimeInForce.DAY)
 
                 if self.v:
@@ -158,14 +136,19 @@ class Trader:
 
                 market_order = self.api.submit_order(market_order_data)
                 orders.append(market_order)
-                total_shorted_cash_amount += stock['Price']
+                total_bought_cash_amount += stock['Price']
+
+                if self.v:
+                    print(market_order_data)
+
             except Exception as ex:
                 cont_trade = False
                 print(stock, ex)
 
-            if total_shorted_cash_amount >= buying_power * margin:
+            if total_bought_cash_amount >= buying_power * margin:
                 cont_trade = False
 
             i += 1
             i = i % l
+
         return orders

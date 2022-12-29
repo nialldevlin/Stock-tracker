@@ -1,4 +1,4 @@
-from trader import Trader
+from trader import Trader, Side
 
 t = Trader(live=False)
-t.shortPositions()
+t.tradePositions(side=Side.SELL)

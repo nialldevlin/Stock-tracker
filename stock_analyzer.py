@@ -108,9 +108,8 @@ class Stockalyzer:
         return pd.Series([self.stock,
                           self.analysis,
                           self.price,
-                          self.stop,
-                          self.sell,
-                          self.score], index=['Symbol', 'Analysis', 'Price', 'Stop', 'Limit', 'Score'])
+                          self.adr,
+                          self.score], index=['Symbol', 'Analysis', 'Price', 'ADR', 'Score'])
 
     def _getPriceData(self, interval='1d'):
         """Download Price history"""
@@ -166,12 +165,12 @@ class Stockalyzer:
             m = np.array([dr, hc, lc]).max()
             daily_ranges = np.append(daily_ranges, m)
         adr = np.mean(daily_ranges)
-        return adr
+        return round(adr, 2)
 
     def _getPrice(self):
         """Get current price"""
 
-        return self.price_data['Close'].iloc[-1]
+        return round(self.price_data['Close'].iloc[-1], 2)
 
     def _getRSI(self):
         """Get Current RSI"""
@@ -189,11 +188,11 @@ class Stockalyzer:
 
     def _getStopPrice(self):
         """Get Stop Loss Price"""
-        return self.stop
+        return round(self.stop, 2)
 
     def _getSellPrice(self):
         """Get Take profit Sell price"""
-        return self.sell
+        return round(self.sell, 2)
 
     def _profitability(self):
         """

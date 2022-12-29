@@ -18,20 +18,20 @@ class Screener:
         Performs analysis on S&P 500. Under Construction
 
     getData()
-        Gets list of S&P 500, analyses each stock in list, returns dataframe. Must run first
+        Gets list of S&P 500, analyses each stock in list, returns dataframe.
 
     getBuy()
-        Returns list of stocks with analysis 'Buy'. Must run after getData()
+        Returns list of stocks with analysis 'Buy'.
 
     getSell()
-        Returns list of stocks with analysis 'Sell'. Must run after getData()
+        Returns list of stocks with analysis 'Sell'.
     """
     def __init__(self, verbose=True):
         self.verbose = verbose
         if self.verbose:
             print('Getting stock list')
         self.list = yfinfo.tickers_sp500()
-        self.data = pd.DataFrame()
+        self.data = self._analyze_stocks()
 
     def getMarketAvgAnalysis(self):
         """Get Analysis of S&P 500 to determine bear or bull market. Under construction
@@ -42,7 +42,7 @@ class Screener:
         s_and_p = Stockalyzer('^GSPC')
         return s_and_p.analysis
 
-    def getData(self):
+    def _analyze_stocks(self):
         """Get analysis for stocks in S&P 500
 
         :return: pandas dataframe, columns: 'Symbol', 'Analysis', 'Price', 'Stop', 'Limit', 'Score'
@@ -66,17 +66,15 @@ class Screener:
         self.data = df
         return df
 
+    def getData(self):
+        return self.data
+
     def getBuy(self):
         """Get stocks with analysis 'Buy' from data compiled
 
         :return: pandas dataframe, columns: 'Symbol', 'Analysis', 'Price', 'Stop', 'Limit', 'Score'
         """
-
-        if self.data.empty:
-            raise Exception('getData must be run first')
-        data = self.data
-        df = data.loc[data['Analysis'] == 'Buy']
-        return df
+        return self.data.loc[self.data['Analysis'] == 'Buy']
 
     def getSell(self):
         """Get stocks with analysis 'Sell' from data compiled
@@ -84,8 +82,4 @@ class Screener:
         :return: pandas dataframe, columns: 'Symbol', 'Analysis', 'Price', 'Stop', 'Limit', 'Score'
         """
 
-        if self.data.empty:
-            raise Exception('getData must be run first')
-        data = self.data
-        df = data.loc[data['Analysis'] == 'Sell']
-        return df
+        return self.data.loc[self.data['Analysis'] == 'Sell']
