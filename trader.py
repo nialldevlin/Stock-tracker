@@ -26,15 +26,23 @@ class Trader:
     """
     # TODO implement short sell
 
-    def __init__(self, verbose=True):
-        """Set up API, account, and get positions
+    def __init__(self, verbose=True, live=True):
+        """Set up API, account, get current positions, get screener data
 
         :param verbose: Verbose output, bool
+        :param live: bool, true for current data - false for testing, uses data from file
         """
         self.v = verbose
         self.api = TradingClient('PKDMSL71FTPAAI5436AH', 'HTm4IdaQsdXjp4LbSQHtrKtZsX7Z62ehvhWL4z3b', paper=True)
         self.account = self.api.get_account()
         self.positions = self.api.get_all_positions()
+
+        if live:
+            screener = Screener()
+            self.data = screener.getData()
+            self.data.to_csv('test_data.csv')
+        else:
+            self.data = pd.read_csv('test_data.csv')
 
     def evalPositions(self):
         """Evaluate current positions. Deprecated
@@ -66,17 +74,9 @@ class Trader:
         :param margin: fraction of buying power to use as float from 0 to 1
         :return: Orders submitted
         """
-        # Live
-        # screener = Screener()
-        # data = screener.getData()
-        # data.to_csv('test_data.csv')
-        # buy_list = screener.getBuy()
+        buy_list = self.data[self.data['Analysis'] == 'Buy']
 
-        # From File: For Testing - Faster
-        list = pd.read_csv('test_data.csv')
-        buy_list = list[list['Analysis'] == 'Buy']
-
-        #best_stocks = buy_list.loc[buy_list['Score'] == buy_list['Score'].max()]
+        # best_stocks = buy_list.loc[buy_list['Score'] == buy_list['Score'].max()]
         best_stocks = buy_list
 
         if self.v:
@@ -109,4 +109,63 @@ class Trader:
 
             if self.v:
                 print(market_order_data)
+        return orders
+
+    def shortPositions(self, margin=0.5, t_percent=0.05):
+        """Shorts stocks with stop/limit order up to margin percent of buying power
+
+                Loops through each stock list, shorts 1 of each starting with cheapest until no more
+                buying power
+
+                :param margin: fraction of buying power to use as float from 0 to 1
+                :param t_percent: trailing percent for trailing stop loss
+                :return: Orders submitted
+                """
+        short_list = self.data[self.data['Analysis'] == 'Sell']
+
+        short_list.sort_values('Price')
+        short_list.reset_index(drop=True)
+        best_stocks = short_list
+
+        if self.v:
+            print('Best Stocks:')
+            print(best_stocks)
+
+        buying_power = float(self.account.buying_power) * margin
+        if self.v:
+            print('Buying Power: ', buying_power)
+
+        orders = []
+        cont_trade = True
+        i = 0
+        l = len(best_stocks.index)
+        total_shorted_cash_amount = 0
+        while cont_trade:
+            stock = best_stocks.iloc[i]
+            if self.v:
+                print('Current Stock:')
+                print(i, ': ', stock)
+            try:
+                market_order_data = MarketOrderRequest(symbol=stock['Symbol'],
+                                                       qty=1,
+                                                       type=OrderType.TRAILING_STOP,
+                                                       side=OrderSide.SELL,
+                                                       trail_percent=t_percent,
+                                                       time_in_force=TimeInForce.DAY)
+
+                if self.v:
+                    print(market_order_data)
+
+                market_order = self.api.submit_order(market_order_data)
+                orders.append(market_order)
+                total_shorted_cash_amount += stock['Price']
+            except Exception as ex:
+                cont_trade = False
+                print(stock, ex)
+
+            if total_shorted_cash_amount >= buying_power * margin:
+                cont_trade = False
+
+            i += 1
+            i = i % l
         return orders

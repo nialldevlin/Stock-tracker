@@ -1,4 +1,4 @@
 from trader import Trader
 
-t = Trader()
-t.buyPositions()
+t = Trader(live=False)
+t.shortPositions()
