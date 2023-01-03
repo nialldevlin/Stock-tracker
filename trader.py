@@ -52,6 +52,12 @@ class Trader:
             self.buy = self.data.loc[self.data['Analysis'] == 'Buy']
             self.sell = self.data.loc[self.data['Analysis'] == 'Sell']
 
+    def getBuySellReccomendation(self):
+        if self.screener.getMarketAvgAnalysis() == 'Buy':
+            return Side.BUY
+        else:
+            return Side.SELL
+
     def evalPositions(self):
         """Evaluate current positions. Deprecated
 

@@ -1,4 +1,5 @@
 from trader import Trader, Side
 
-t = Trader(live=False)
-t.tradePositions(side=Side.SELL)
+t = Trader()
+rec = t.getBuySellReccomendation()
+t.tradePositions(side=rec)
