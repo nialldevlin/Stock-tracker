@@ -37,7 +37,7 @@ class Trader:
         :param live: bool, true for current data - false for testing, uses data from file
         """
         self.v = verbose
-        self.api = TradingClient('PKDMSL71FTPAAI5436AH', 'HTm4IdaQsdXjp4LbSQHtrKtZsX7Z62ehvhWL4z3b', paper=True)
+        self.api = TradingClient('PKYKGKUGPVDK7OGSIRSD', 'vvh1Hvgc0MaNIi0S7fw2dtjF7qOogoiI0kNt6HoY', paper=True)
         self.account = self.api.get_account()
         self.positions = self.api.get_all_positions()
 
@@ -107,17 +107,16 @@ class Trader:
         if self.v:
             print('Buying Power: ', buying_power)
 
+        total = best_stocks['Price'].sum()
+        amt = int(buying_power/total)
+
         orders = []
-        cont_trade = True
-        i = 0
-        l = len(best_stocks.index)
         total_bought_cash_amount = 0
 
-        while cont_trade:
-            stock = best_stocks.iloc[i]
+        for index, stock in best_stocks.iterrows():
             if self.v:
-                print('Current Stock:')
-                print(i, ': ', stock)
+                print(f'Current Stock:{stock}')
+
             try:
                 if side == Side.BUY:
                     stop = round(stock['Price'] - stock['ADR'], 2)
@@ -129,32 +128,28 @@ class Trader:
                     o_side = OrderSide.SELL
 
                 market_order_data = MarketOrderRequest(symbol=stock['Symbol'],
-                                                       qty=1,
+                                                       qty=amt,
                                                        type=OrderType.MARKET,
                                                        side=o_side,
                                                        order_class=OrderClass.BRACKET,
                                                        take_profit={'limit_price': limit},
                                                        stop_loss={'stop_price': stop},
-                                                       time_in_force=TimeInForce.DAY)
+                                                       time_in_force=TimeInForce.GTC)
 
                 if self.v:
                     print(market_order_data)
 
                 market_order = self.api.submit_order(market_order_data)
                 orders.append(market_order)
-                total_bought_cash_amount += stock['Price']
+                total_bought_cash_amount += (stock['Price'] * amt)
 
                 if self.v:
                     print(market_order_data)
 
             except Exception as ex:
-                cont_trade = False
-                print(stock, ex)
+                warnings.warn(f"{stock}:{ex}")
 
-            if total_bought_cash_amount >= buying_power * margin:
-                cont_trade = False
-
-            i += 1
-            i = i % l
+            if self.v:
+                print(f'Total bought: ${total_bought_cash_amount}')
 
         return orders
