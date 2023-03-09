@@ -6,3 +6,4 @@ key.key
 update.sh
 update_paper.sh
 gitignoreupdate.sh
+*.sqlite
