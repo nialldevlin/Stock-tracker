@@ -1,6 +1,8 @@
 # Stock tracker
 ## Technical analysis based stock screener and trader
 <p>
+Warning: This project is under construction. Somewhere between none and all of it works. Good luck.
+
 Uses a combination of technical indicators to determine which stocks in the S&P 500 are profitable, finds the best stock, and places a trade with the Alpaca trade api (https://alpaca.markets/). It also monitors current positions and determines when to sell. Meant to be run hourly or daily from a server.
 
 WARNING:
