@@ -8,7 +8,7 @@ import os
 import ta
 
 class Stockalyzer:
-    def __init__(self, symbol, interval='day', mode='store'):
+    def __init__(self, symbol, interval='day', mode='store', financials=True):
         '''
         Class to analyze stocks using 3 tecnical indicators: Relative Strength Index (RSI)
         Stochastic Oscillator, and Moving Average Convergence Divergence (MACD) and simple moving
@@ -57,11 +57,14 @@ class Stockalyzer:
         macd = ta.trend.MACD(self.price_data['close'])
         self.macd = macd.macd()
         self.macd_sig = macd.macd_signal()
+        
+        self.financials = financials
 
-        self.balance_sheet = yf.get_balance_sheet(self.stock)
-        self.income_statement = yf.get_income_statement(self.stock)
-        self.cfs = yf.get_cash_flow(self.stock)
-        self.years = self.balance_sheet.columns
+        if self.financials:
+            self.balance_sheet = yf.get_balance_sheet(self.stock)
+            self.income_statement = yf.get_income_statement(self.stock)
+            self.cfs = yf.get_cash_flow(self.stock)
+            self.years = self.balance_sheet.columns
         
         self.score = self.get_score()
         self.analysis = self.get_analysis()
@@ -92,6 +95,10 @@ class Stockalyzer:
         Determine profitability of a company using income statement, balance sheet, and cash flow
         :return: p_score - total profitability score from 0 to 4
         """
+
+        if not self.financials:
+            raise Exception("Financials must be enabled. Set financials argument to true when initializing Stockalyzer")
+
         p_score = 0
 
         # Net Income
@@ -126,6 +133,10 @@ class Stockalyzer:
         Determine leverage of a company with balance sheet
         :return: l_score - total leverage score from 0 to 2
         """
+        
+        if not self.financials:
+            raise Exception("Financials must be enabled. Set financials argument to true when initializing Stockalyzer")
+
         l_score = 0
 
         # Long-term debt ratio
@@ -152,6 +163,10 @@ class Stockalyzer:
         Determine operating efficency of a company
         :return: oe_score - score representing operating efficency from 0 to 2
         """
+        
+        if not self.financials:
+            raise Exception("Financials must be enabled. Set financials argument to true when initializing Stockalyzer")
+
         oe_score = 0
 
         # Gross margin
@@ -179,6 +194,10 @@ class Stockalyzer:
         Returns total score based on profitability, leverage, and operating efficiency
         :return: s - total score from 0 (worst) to 8 (best)
         """
+        
+        if not self.financials:
+            raise Exception("Financials must be enabled. Set financials argument to true when initializing Stockalyzer")
+
         s = self.profitability() + self.leverage() + self.operating_efficiency()
         return s
 
