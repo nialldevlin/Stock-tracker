@@ -1,5 +1,14 @@
-from ai_trader import AITrader
+from simulate import Simulate
+import yaml
 
-t = AITrader('../data/model.h5', 70, 5)
-t.evalPortfolio()
-t.trade('s')
+with open("config.yaml", 'r') as f:
+    config = yaml.safe_load(f)
+
+s = Simulate(starting_cash=config["simulate"]["starting_cash"],
+             period=config["data"]["period"],
+             interval=config["data"]["interval"],
+             csv=config["data"]["csv"],
+             rw=config["data"]["rw"])
+
+
+

@@ -1,0 +1,25 @@
+data:
+    period: 10y
+    interval: 1d
+    csv: data.csv
+    write_csv: true
+    read_csv: false
+simulate:
+    starting_cash: 100000
+technical:
+    rsi:
+        period: 7
+    stoch:
+        slow: 14
+        fast: 3
+    macd:
+        slow: 26
+        fast: 12
+        signal: 9
+    adr:
+        period: 7
+    avgs:
+        - 7
+        - 50
+        - 100
+    
